@@ -48,14 +48,14 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.space4,
   },
   logo: {
+    fontFamily: 'GeneralSans-Semibold',
     fontSize: 36,
-    fontWeight: Typography.semibold,
     color: Colors.primary300,
     letterSpacing: -1,
   },
   title: {
+    fontFamily: 'GeneralSans-Semibold',
     fontSize: Typography.headline200,
-    fontWeight: Typography.semibold,
     color: Colors.primary300,
   },
   rightButton: {
@@ -65,8 +65,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   plusIcon: {
+    fontFamily: 'GeneralSans-Semibold',
     fontSize: 32,
-    fontWeight: Typography.semibold,
     color: Colors.primary300,
     lineHeight: 32,
   },

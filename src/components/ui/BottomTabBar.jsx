@@ -65,8 +65,8 @@ const styles = StyleSheet.create({
     color: Colors.accent300,
   },
   label: {
+    fontFamily: 'GeneralSans-Medium',
     fontSize: Typography.body300,
-    fontWeight: Typography.medium,
     color: Colors.neutral400,
     marginTop: 0,
   },

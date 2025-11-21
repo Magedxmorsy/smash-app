@@ -51,29 +51,28 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: 214,
     height: 214,
-    marginBottom: Spacing.space8,
+    marginBottom: Spacing.space8, // 32px
   },
   image: {
     width: '100%',
     height: '100%',
   },
   headline: {
-    fontSize: Typography.headline200,
-    fontWeight: Typography.semibold,
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.headline100,
     color: Colors.primary300,
     textAlign: 'center',
-    marginBottom: Spacing.space2,
+    marginBottom: Spacing.space2, // 8px
     lineHeight: Typography.headline100 * Typography.lineHeightHeadline,
   },
   body: {
+    fontFamily: 'GeneralSans-Medium',
     fontSize: Typography.body200,
-    fontWeight: Typography.medium,
     color: Colors.neutral400,
     textAlign: 'center',
     lineHeight: Typography.body200 * Typography.lineHeightBody,
-    marginBottom: Spacing.space8,
   },
   buttonContainer: {
-    marginTop: Spacing.space8,
+    marginTop: Spacing.space8, // 32px
   },
 });

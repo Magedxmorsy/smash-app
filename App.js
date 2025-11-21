@@ -1,12 +1,30 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, StyleSheet, View } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import * as Font from 'expo-font';
 import CompeteScreen from './src/screens/compete/CompeteScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import { Colors } from './src/constants/Colors';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('compete');
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      await Font.loadAsync({
+        'GeneralSans-Regular': require('./assets/fonts/GeneralSans-Regular.otf'),
+        'GeneralSans-Medium': require('./assets/fonts/GeneralSans-Medium.otf'),
+        'GeneralSans-Semibold': require('./assets/fonts/GeneralSans-Semibold.otf'),
+      });
+      setFontsLoaded(true);
+    }
+    loadFonts();
+  }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container}>

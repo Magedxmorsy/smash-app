@@ -7,7 +7,7 @@ import { Spacing, BorderRadius } from '../../constants/Spacing';
 export default function Button({ 
   title, 
   onPress, 
-  variant = 'primary', // primary, secondary, accent, ghost
+  variant = 'primary',
   disabled = false,
   fullWidth = true 
 }) {
@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral200,
   },
   text: {
+    fontFamily: 'GeneralSans-Semibold',
     fontSize: Typography.button,
-    fontWeight: Typography.semibold,
     lineHeight: Typography.button * Typography.lineHeightButton,
   },
   textLight: {
