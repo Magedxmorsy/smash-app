@@ -52,7 +52,7 @@ export default function Button({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: BorderRadius.radius4,
     justifyContent: 'center',
     alignItems: 'center',
