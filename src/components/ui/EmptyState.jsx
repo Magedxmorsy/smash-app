@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   headline: {
-    fontSize: Typography.headline100,
+    fontSize: Typography.headline200,
     fontWeight: Typography.semibold,
     color: Colors.primary300,
     textAlign: 'center',
