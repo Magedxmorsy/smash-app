@@ -1,36 +1,57 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 
-export default function Button({ 
-  title, 
-  onPress, 
+export default function Button({
+  title,
+  onPress,
   variant = 'primary',
   disabled = false,
-  fullWidth = true 
+  fullWidth = true,
 }) {
+  const handlePress = () => {
+    if (!disabled) {
+      if (Platform.OS === 'ios') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      onPress?.();
+    }
+  };
+
   const getButtonStyle = () => {
-    if (disabled) return styles.buttonDisabled;
+    if (disabled) return styles.disabled;
     
     switch (variant) {
+      case 'primary':
+        return styles.primary;
       case 'secondary':
-        return styles.buttonSecondary;
+        return styles.secondary;
       case 'accent':
-        return styles.buttonAccent;
+        return styles.accent;
       case 'ghost':
-        return styles.buttonGhost;
+        return styles.ghost;
       default:
-        return styles.buttonPrimary;
+        return styles.primary;
     }
   };
 
   const getTextStyle = () => {
     if (disabled) return styles.textDisabled;
-    if (variant === 'ghost') return styles.textGhost;
-    if (variant === 'accent') return styles.textAccent;
-    return styles.textLight;
+    
+    switch (variant) {
+      case 'primary':
+      case 'secondary':
+        return styles.textLight;
+      case 'accent':
+        return styles.textDark;
+      case 'ghost':
+        return styles.textDark;
+      default:
+        return styles.textLight;
+    }
   };
 
   return (
@@ -38,12 +59,21 @@ export default function Button({
       style={[
         styles.button,
         getButtonStyle(),
-        fullWidth && styles.fullWidth,
-        !fullWidth && styles.autoWidth,
+        !fullWidth && styles.buttonHug,
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
-      activeOpacity={0.8}
+      activeOpacity={1}
+      onPressIn={(e) => {
+        e.currentTarget.setNativeProps({
+          style: { transform: [{ scale: 0.98 }] }
+        });
+      }}
+      onPressOut={(e) => {
+        e.currentTarget.setNativeProps({
+          style: { transform: [{ scale: 1 }] }
+        });
+      }}
     >
       <Text style={[styles.text, getTextStyle()]}>{title}</Text>
     </TouchableOpacity>
@@ -52,49 +82,46 @@ export default function Button({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
-    borderRadius: BorderRadius.radius4,
+    height: 56,
+    borderRadius: BorderRadius.radius4, // 16px
+    paddingVertical: Spacing.space2, // 8px
+    paddingHorizontal: Spacing.space4, // 16px
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: Spacing.space2,
-    paddingHorizontal: Spacing.space4,
-  },
-  fullWidth: {
     width: '100%',
   },
-  autoWidth: {
-    paddingHorizontal: Spacing.space6,
+  buttonHug: {
+    width: 'auto',
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.space6, // 24px
   },
-  buttonPrimary: {
+  primary: {
     backgroundColor: Colors.primary300,
   },
-  buttonSecondary: {
+  secondary: {
     backgroundColor: Colors.secondary300,
   },
-  buttonAccent: {
+  accent: {
     backgroundColor: Colors.accent300,
   },
-  buttonGhost: {
+  ghost: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  buttonDisabled: {
+  disabled: {
     backgroundColor: Colors.neutral200,
   },
   text: {
     fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.button,
-    lineHeight: Typography.button * Typography.lineHeightButton,
+    fontSize: Typography.button, // 16px
+    lineHeight: Typography.button, // 100% line height
   },
   textLight: {
-    color: Colors.surface,
+    color: Colors.surface, // White
   },
-  textGhost: {
-    color: Colors.primary300,
-  },
-  textAccent: {
-    color: Colors.primary300,
+  textDark: {
+    color: Colors.primary300, // Dark purple
   },
   textDisabled: {
     color: Colors.neutral400,

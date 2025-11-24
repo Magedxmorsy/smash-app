@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button';
 import MobileHeader from '../../components/ui/MobileHeader';
 import CreateTournamentModal from '../../components/tournament/CreateTournamentModal';
 
-export default function CompeteScreen() {
+export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleCreateTournament = () => {
@@ -20,7 +20,7 @@ export default function CompeteScreen() {
   return (
     <View style={styles.container}>
       <MobileHeader 
-        title="Compete"
+        showLogo={true}
         rightIcon="plus"
         onRightPress={handleCreateTournament}
       />

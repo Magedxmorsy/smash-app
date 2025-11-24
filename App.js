@@ -1,39 +1,51 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, StyleSheet, View } from 'react-native';
-import { useState, useEffect } from 'react';
-import * as Font from 'expo-font';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { useFonts } from 'expo-font';
+import HomeScreen from './src/screens/home/HomeScreen';
 import CompeteScreen from './src/screens/compete/CompeteScreen';
 import BottomTabBar from './src/components/ui/BottomTabBar';
 import { Colors } from './src/constants/Colors';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('compete');
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState('home');
 
-  useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync({
-        'GeneralSans-Regular': require('./assets/fonts/GeneralSans-Regular.otf'),
-        'GeneralSans-Medium': require('./assets/fonts/GeneralSans-Medium.otf'),
-        'GeneralSans-Semibold': require('./assets/fonts/GeneralSans-Semibold.otf'),
-      });
-      setFontsLoaded(true);
-    }
-    loadFonts();
-  }, []);
+  const [fontsLoaded] = useFonts({
+    'GeneralSans-Regular': require('./assets/fonts/GeneralSans-Regular.otf'),
+    'GeneralSans-Medium': require('./assets/fonts/GeneralSans-Medium.otf'),
+    'GeneralSans-Semibold': require('./assets/fonts/GeneralSans-Semibold.otf'),
+  });
 
   if (!fontsLoaded) {
     return null;
   }
 
+  const renderScreen = () => {
+    switch (activeTab) {
+      case 'home':
+        return <HomeScreen />;
+      case 'compete':
+        return <CompeteScreen />;
+      case 'updates':
+        return <View style={{ flex: 1 }} />;
+      case 'profile':
+        return <View style={{ flex: 1 }} />;
+      default:
+        return <HomeScreen />;
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <CompeteScreen />
-      </View>
-      <BottomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
-      <StatusBar style="dark" />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          {renderScreen()}
+        </View>
+        <BottomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
+        <StatusBar style="dark" />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

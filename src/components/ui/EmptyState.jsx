@@ -68,8 +68,9 @@ const styles = StyleSheet.create({
   body: {
     fontFamily: 'GeneralSans-Medium',
     fontSize: Typography.body200,
-    color: Colors.neutral400,
+    color: Colors.primary300,
     textAlign: 'center',
+    maxWidth: 252,
     lineHeight: Typography.body200 * Typography.lineHeightBody,
   },
   buttonContainer: {

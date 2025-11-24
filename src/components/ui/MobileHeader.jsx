@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Platform } from 'r
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
+import SmashLogo from '../../../assets/branding/smash-logo.svg';
+import AddIcon from '../../../assets/icons/add.svg';
 
 export default function MobileHeader({ title, showLogo = false, rightIcon, onRightPress }) {
   const statusBarHeight = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0;
@@ -12,21 +14,23 @@ export default function MobileHeader({ title, showLogo = false, rightIcon, onRig
       <View style={styles.content}>
         {/* Left: Logo or Title */}
         {showLogo ? (
-          <Text style={styles.logo}>smash</Text>
-        ) : (
-          <Text style={styles.title}>{title}</Text>
-        )}
+  <View style={{ marginBottom: 0 }}>
+    <SmashLogo width={100} height={36} />
+  </View>
+) : (
+  <Text style={styles.title}>{title}</Text>
+)}
         
         {/* Right: Action Icon */}
         {rightIcon && (
-          <TouchableOpacity 
-            style={styles.rightButton}
-            onPress={onRightPress}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.plusIcon}>+</Text>
-          </TouchableOpacity>
-        )}
+  <TouchableOpacity 
+    style={styles.rightButton}
+    onPress={onRightPress}
+    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+  >
+    <AddIcon width={32} height={32} />
+  </TouchableOpacity>
+)}
       </View>
     </View>
   );
@@ -57,12 +61,16 @@ const styles = StyleSheet.create({
     fontFamily: 'GeneralSans-Semibold',
     fontSize: Typography.headline200,
     color: Colors.primary300,
+    height: 30,
+    //lineHeight: 30,
   },
   rightButton: {
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: -8,  // Add this - moves it 8px right
+    marginBottom: -4, // Add this - aligns with logo baseline
   },
   plusIcon: {
     fontFamily: 'GeneralSans-Semibold',
