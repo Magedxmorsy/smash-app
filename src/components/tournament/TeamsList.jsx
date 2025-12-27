@@ -1,0 +1,180 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Colors } from '../../constants/Colors';
+import { Typography } from '../../constants/Typography';
+import { Spacing } from '../../constants/Spacing';
+import Player from '../ui/Player';
+import JoinButton from '../ui/JoinButton';
+import EmptyState from '../ui/EmptyState';
+import Button from '../ui/Button';
+import PlusIcon from '../../../assets/icons/plus.svg';
+
+export default function TeamsList({ teams, totalTeams, onJoinTeam, onCreateTeam, userHasTeam = false, isAdmin = false, currentUserId = null, onStartTournament }) {
+  // Filter out empty teams (both players are null)
+  const activeTeams = teams.filter(team => team.player1 !== null || team.player2 !== null);
+
+  // Calculate filled teams (both players present)
+  const filledTeams = teams.filter(t => t.player1 !== null && t.player2 !== null);
+  const isTournamentFull = filledTeams.length === totalTeams;
+
+  const renderTeamItem = (team, index) => {
+    const hasPlayer1 = team.player1 !== null;
+    const hasPlayer2 = team.player2 !== null;
+    // Check if this is the admin's team (don't show join button for admin's own team)
+    const isAdminTeam = team.isAdminTeam === true;
+    // Check if current user is player1 of this team
+    const isCurrentUserOnThisTeam = team.player1?.userId === currentUserId;
+
+    return (
+      <View key={index} style={styles.teamItem}>
+        {/* Player 1 (Left) */}
+        {hasPlayer1 ? (
+          <Player
+            firstName={team.player1.firstName}
+            lastName={team.player1.lastName}
+            avatarSource={team.player1.avatarSource}
+            align="left"
+          />
+        ) : (
+          <View style={styles.emptyPlayer} />
+        )}
+
+        {/* Player 2 (Right) or Join/Invite button */}
+        {hasPlayer2 ? (
+          <Player
+            firstName={team.player2.firstName}
+            lastName={team.player2.lastName}
+            avatarSource={team.player2.avatarSource}
+            align="right"
+          />
+        ) : hasPlayer1 ? (
+          <JoinButton
+            label={userHasTeam ? "Invite" : "Join"}
+            onPress={() => onJoinTeam(index)}
+            align="right"
+          />
+        ) : (
+          <View style={styles.emptyPlayer} />
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Teams</Text>
+        <Text style={styles.count}>
+          {teams.filter(t => t.player1 !== null && t.player2 !== null).length}/{totalTeams}
+        </Text>
+      </View>
+
+      {/* Teams List or Empty State */}
+      {activeTeams.length === 0 ? (
+        <EmptyState
+          imageSource={require('../../../assets/noteams.png')}
+          headline="No teams yet"
+          body={isAdmin ? "Share this tournament with your friends to get them to join" : "Be the first to join this tournament"}
+        />
+      ) : (
+        <View style={styles.teamsList}>
+          {activeTeams.map((team, index) => renderTeamItem(team, index))}
+
+          {/* Tournament Full State - Only show message, button is in sticky position */}
+          {isTournamentFull && (
+            <View style={styles.fullStateContainer}>
+              {/* Message based on user type */}
+              {isAdmin ? (
+                <Text style={styles.fullStateMessage}>All spots filled. Let's start it 💪</Text>
+              ) : userHasTeam ? (
+                <Text style={styles.fullStateMessage}>All set! Waiting for the host to start 🎾</Text>
+              ) : (
+                <Text style={styles.fullStateMessage}>Tournament is full. Check back for upcoming tournaments 🏆</Text>
+              )}
+            </View>
+          )}
+
+          {/* Create New Team Button - Only show if tournament NOT full and user doesn't have a team */}
+          {!isTournamentFull && !userHasTeam && !isAdmin && (
+            <TouchableOpacity
+              style={styles.createTeamButton}
+              onPress={onCreateTeam}
+            >
+              <PlusIcon width={20} height={20} color={Colors.primary300} />
+              <Text style={styles.createTeamText}>Create new team</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    gap: Spacing.space2,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  title: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+  },
+  count: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+  },
+  teamsList: {
+    gap: Spacing.space1,
+  },
+  teamItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    padding: Spacing.space3,
+    minHeight: 64,
+  },
+  emptyPlayer: {
+    width: 100, // Placeholder for empty player slot
+  },
+  createTeamButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.neutral300,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: Spacing.space4,
+    minHeight: 64,
+    gap: Spacing.space2,
+  },
+  createTeamText: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.button,
+    lineHeight: Typography.button * Typography.lineHeightButton,
+    color: Colors.primary300,
+  },
+  fullStateContainer: {
+    gap: Spacing.space4,
+    marginTop: Spacing.space2,
+  },
+  fullStateMessage: {
+    fontFamily: 'GeneralSans-Medium',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+    textAlign: 'center',
+    lineHeight: Typography.body200 * 1.5,
+  },
+});

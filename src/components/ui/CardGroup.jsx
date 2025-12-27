@@ -22,7 +22,7 @@ export default function CardGroup({ title, children }) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.space4,
+    // No marginBottom - parent will handle spacing with gap
   },
   title: {
     fontFamily: 'GeneralSans-Semibold',
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   divider: {
-    height: 1,
+    height: Spacing.dividerHeight,
     backgroundColor: Colors.border,
     marginHorizontal: Spacing.space4,
   },

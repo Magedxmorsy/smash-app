@@ -77,6 +77,109 @@ smash/
 
 ---
 
+## Architecture Overview
+
+### Tournament-Match Hierarchy
+
+SMASH follows a hierarchical data architecture where tournaments contain teams and matches:
+
+```
+Tournament
+â"œâ"€â"€ Teams (configured by number: 4, 8, 12, 16, 20, 24, 28, 32)
+â"‚   â"œâ"€â"€ Team 1 (Player 1 + Player 2)
+â"‚   â"œâ"€â"€ Team 2 (Player 1 + Player 2)
+â"‚   â""â"€â"€ Team N...
+â"‚
+â""â"€â"€ Matches (generated when tournament starts)
+    â"œâ"€â"€ Group Stage Matches
+    â"‚   â"œâ"€â"€ Group A Matches (round-robin)
+    â"‚   â"œâ"€â"€ Group B Matches (round-robin)
+    â"‚   â""â"€â"€ Group C/D Matches... (if applicable)
+    â"‚
+    â""â"€â"€ Knockout Stage Matches
+        â"œâ"€â"€ Round of 16 (if 16+ teams)
+        â"œâ"€â"€ Quarter Finals
+        â"œâ"€â"€ Semi Finals
+        â"œâ"€â"€ Third Place Match
+        â""â"€â"€ Final
+```
+
+### Tournament Lifecycle
+
+1. **Registration Phase:**
+   - Host creates tournament with specified number of teams
+   - Players join and form teams (2 players per team)
+   - Tournament status: `registration`
+   - Teams can join until tournament reaches capacity
+
+2. **Group Stage Phase (Started by Host):**
+   - Host clicks "Start Tournament" when ready
+   - System automatically:
+     - Shuffles teams randomly
+     - Forms groups (2 groups for ≤8 teams, 4 groups for >8 teams)
+     - Generates round-robin matches within each group
+     - Auto-staggers match times throughout the tournament duration
+   - Tournament status: `group_stage`
+   - Teams play all matches within their group
+   - Points awarded: 3 for win, 1 for draw, 0 for loss
+
+3. **Knockout Phase (Auto-triggered):**
+   - Triggered when all group stage matches are completed
+   - Top 2 teams from each group qualify
+   - System generates knockout bracket matches
+   - Tournament status: `knockout`
+   - Single elimination format
+
+4. **Completion:**
+   - Final match determines 1st and 2nd place
+   - Third place match determines 3rd place
+   - Tournament status: `completed`
+   - Winners are recorded and user stats updated
+
+### Match Details
+
+Each match contains:
+- **Teams:** Reference to 2 teams (teamA and teamB)
+- **Match Type:** group, r16, quarter, semi, final, third_place
+- **Round:** Descriptive string (e.g., "Group A", "Quarterfinal 1")
+- **Scheduled Time:** Auto-calculated staggered time slot
+- **Status:** scheduled, in_progress, completed
+- **Result:** (when completed)
+  - Set scores (best of 3 or 5 sets)
+  - Game scores within each set
+  - Winner team ID
+  - Submission metadata (who recorded it, when)
+
+### Data Relationships
+
+```
+User ──┬── participatesIn ──> Team
+       │
+       â""── records ──> Match.result
+
+Team ──┬── belongsTo ──> Tournament
+       │
+       â""── playsIn ──> Match (as teamA or teamB)
+
+Tournament ──┬── contains ──> Team[]
+             │
+             â"œâ"€â"€ contains ──> Match[]
+             │
+             â"œâ"€â"€ organizedInto ──> Group[] (group stage)
+             │
+             â""â"€â"€ organizedInto ──> KnockoutBracket (knockout stage)
+
+Match ──┬── references ──> Team (teamA)
+        │
+        â"œâ"€â"€ references ──> Team (teamB)
+        │
+        â"œâ"€â"€ belongsTo ──> Tournament
+        │
+        â""â"€â"€ partOf ──> Group OR KnockoutBracket
+```
+
+---
+
 ## Data Models
 
 ### User

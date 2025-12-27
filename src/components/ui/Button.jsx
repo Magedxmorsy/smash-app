@@ -11,6 +11,7 @@ export default function Button({
   variant = 'primary',
   disabled = false,
   fullWidth = true,
+  size = 'large', // 'large' (56px) or 'medium' (48px)
 }) {
   const handlePress = () => {
     if (!disabled) {
@@ -40,7 +41,7 @@ export default function Button({
 
   const getTextStyle = () => {
     if (disabled) return styles.textDisabled;
-    
+
     switch (variant) {
       case 'primary':
       case 'secondary':
@@ -58,6 +59,7 @@ export default function Button({
     <TouchableOpacity
       style={[
         styles.button,
+        size === 'medium' && styles.buttonMedium,
         getButtonStyle(),
         !fullWidth && styles.buttonHug,
       ]}
@@ -75,20 +77,30 @@ export default function Button({
         });
       }}
     >
-      <Text style={[styles.text, getTextStyle()]}>{title}</Text>
+      <Text style={[
+        styles.text,
+        size === 'medium' && styles.textMedium,
+        getTextStyle()
+      ]}>
+        {title}
+      </Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    height: 56,
-    borderRadius: BorderRadius.radius4, // 16px
-    paddingVertical: Spacing.space2, // 8px
-    paddingHorizontal: Spacing.space4, // 16px
+    minHeight: Spacing.buttonHeightLarge,
+    borderRadius: BorderRadius.radius4,
+    paddingVertical: Spacing.space2,
+    paddingHorizontal: Spacing.space4,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+  },
+  buttonMedium: {
+    minHeight: Spacing.buttonHeightMedium,
+    paddingVertical: Spacing.space2,
   },
   buttonHug: {
     width: 'auto',
@@ -114,8 +126,12 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.button, // 16px
+    fontSize: Typography.button, // 16px - for all buttons
     lineHeight: Typography.button, // 100% line height
+  },
+  textMedium: {
+    fontSize: Typography.button, // 16px - for small/medium buttons
+    lineHeight: Typography.button * 1.2, // Add some line height for better vertical centering
   },
   textLight: {
     color: Colors.surface, // White

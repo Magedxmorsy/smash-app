@@ -1,112 +1,79 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
+import { Colors } from '../../constants/Colors';
+import { Spacing, BorderRadius } from '../../constants/Spacing';
+import { Typography } from '../../constants/Typography';
 
-/**
- * Avatar component with support for images and initials fallback
- *
- * @param {string} size - 'small' (40px), 'medium' (72px), or 'large' (96px)
- * @param {string} source - Image URI for avatar
- * @param {string} name - Name to generate initials from (fallback)
- * @param {boolean} withBorder - Show border around avatar
- * @param {string} backgroundColor - Custom background color for initials (defaults to Primary-300)
- */
-const Avatar = ({
-  size = 'medium',
-  source,
-  name = '',
-  withBorder = false,
-  backgroundColor
-}) => {
-  // Get initials from name
+const SIZES = {
+  small: { dimension: Spacing.avatarSmall, fontSize: Typography.body200 },
+  medium: { dimension: Spacing.avatarMedium, fontSize: Typography.headline200 },
+  large: { dimension: Spacing.avatarLarge, fontSize: Typography.headline300 },
+};
+
+const Avatar = ({ size = 'medium', source, name = '', withBorder = false, backgroundColor }) => {
   const getInitials = (name) => {
     if (!name) return '?';
-    const parts = name.trim().split(' ');
-    if (parts.length === 1) {
-      return parts[0].charAt(0).toUpperCase();
-    }
-    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    return name.trim().charAt(0).toUpperCase();
   };
 
-  // Size configurations
-  const sizeConfig = {
-    small: {
-      dimension: 40,
-      fontSize: 16,
-    },
-    medium: {
-      dimension: 72,
-      fontSize: 28,
-    },
-    large: {
-      dimension: 96,
-      fontSize: 40,
-    },
-  };
-
-  const config = sizeConfig[size] || sizeConfig.medium;
+  const { dimension, fontSize } = SIZES[size] || SIZES.medium;
   const initials = getInitials(name);
-  const bgColor = backgroundColor || colors.primary300;
+  const bgColor = backgroundColor || Colors.neutral200;
+
+  if (source) {
+    return (
+      <Image
+        source={typeof source === 'string' ? { uri: source } : source}
+        style={[
+          styles.image,
+          {
+            width: dimension,
+            height: dimension,
+          },
+          withBorder && styles.imageBorder
+        ]}
+        resizeMode="cover"
+      />
+    );
+  }
 
   return (
     <View
       style={[
         styles.container,
         {
-          width: config.dimension,
-          height: config.dimension,
-          backgroundColor: source ? 'transparent' : bgColor,
-          borderWidth: withBorder ? 1 : 0,
+          width: dimension,
+          height: dimension,
+          backgroundColor: bgColor,
         },
+        withBorder && styles.containerBorder
       ]}
     >
-      {source ? (
-        <Image
-          source={{ uri: source }}
-          style={[
-            styles.image,
-            {
-              width: config.dimension,
-              height: config.dimension,
-            },
-          ]}
-          resizeMode="cover"
-        />
-      ) : (
-        <Text
-          style={[
-            styles.initials,
-            {
-              fontSize: config.fontSize,
-            },
-          ]}
-        >
-          {initials}
-        </Text>
-      )}
+      <Text style={[styles.initials, { fontSize }]}>{initials}</Text>
     </View>
   );
 };
 
-const colors = {
-  primary300: '#281F42',
-  surface: '#FFFFFF',
-  border: '#E8E8E8',
-};
-
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 9999,
-    borderColor: colors.border,
+    borderRadius: BorderRadius.radiusFull,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+  },
+  containerBorder: {
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
   image: {
-    borderRadius: 9999,
+    borderRadius: BorderRadius.radiusFull,
+  },
+  imageBorder: {
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
   initials: {
     fontFamily: 'GeneralSans-Semibold',
-    color: colors.surface,
+    color: Colors.primary300,
     textAlign: 'center',
   },
 });

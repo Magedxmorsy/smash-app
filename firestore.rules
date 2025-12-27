@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection - users can read/write their own document
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Users can update their own data
+      allow update: if request.auth != null && request.auth.uid == userId;
+
+      // Anyone authenticated can create a user document (for signup)
+      allow create: if request.auth != null;
+
+      // Users can delete their own account
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Tournaments collection
+    match /tournaments/{tournamentId} {
+      // Anyone authenticated can read tournaments
+      allow read: if request.auth != null;
+
+      // Any authenticated user can create tournaments
+      allow create: if request.auth != null;
+
+      // Only the creator can update/delete their tournaments
+      allow update, delete: if request.auth != null &&
+                              resource.data.createdBy == request.auth.uid;
+    }
+
+    // Default: deny all other access for security
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

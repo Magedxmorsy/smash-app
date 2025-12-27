@@ -144,6 +144,86 @@ Debugging: React Native Debugger, Expo Dev Tools
 
 ---
 
+## App Architecture
+
+### Tournament-Match Data Model
+
+SMASH uses a hierarchical data structure where **tournaments contain teams and matches**:
+
+#### Tournament Hierarchy
+```
+Tournament
+├── Configuration
+│   ├── Number of Teams (4, 8, 12, 16, 20, 24, 28, or 32)
+│   ├── Location, Date/Time
+│   ├── Rules & Format (World Cup)
+│   └── Host/Admin
+│
+├── Teams (dynamically created as players join)
+│   ├── Team 1 (Player 1 + Player 2)
+│   ├── Team 2 (Player 1 + Player 2)
+│   └── Team N...
+│
+└── Matches (generated when host starts tournament)
+    ├── Group Stage
+    │   ├── Group A Matches (every team plays every other team)
+    │   ├── Group B Matches
+    │   └── Group C/D Matches (for larger tournaments)
+    │
+    └── Knockout Stage (auto-triggered after group stage)
+        ├── Round of 16 (16+ team tournaments)
+        ├── Quarter Finals
+        ├── Semi Finals
+        ├── Third Place Match
+        └── Final
+```
+
+#### Match Structure
+Each match is a self-contained entity that:
+- References 2 teams (teamA and teamB)
+- Belongs to a tournament
+- Has a type (group, r16, quarter, semi, final, third_place)
+- Contains a round identifier ("Group A", "Quarterfinal 1", etc.)
+- Has an auto-scheduled time slot
+- Stores results when completed:
+  - Set scores (typically best of 3)
+  - Individual game scores per set
+  - Winner team ID
+  - Recording metadata (who submitted, when)
+
+#### Tournament Flow & Match Generation
+
+**Phase 1: Registration (status: `registration`)**
+- Host creates tournament
+- Players join and form teams
+- Waits until desired number of teams join (up to max capacity)
+
+**Phase 2: Group Stage (status: `group_stage`)**
+- Triggered when host clicks "Start Tournament"
+- System automatically:
+  1. Randomly shuffles all teams
+  2. Divides into groups:
+     - ≤8 teams → 2 groups
+     - >8 teams → 4 groups
+  3. Generates round-robin matches within each group
+  4. Auto-staggers match times across tournament duration
+- Teams earn points: 3 for win, 1 for draw, 0 for loss
+- Standings tracked per group
+
+**Phase 3: Knockout (status: `knockout`)**
+- Auto-triggered when all group matches completed
+- Top 2 teams from each group advance
+- System generates single-elimination bracket
+- Match pairings based on group standings
+
+**Phase 4: Completion (status: `completed`)**
+- Final determines 1st and 2nd place
+- Third place match determines 3rd place
+- Winners recorded
+- User stats updated automatically
+
+---
+
 ## Database Schema
 
 ### Firestore Collections

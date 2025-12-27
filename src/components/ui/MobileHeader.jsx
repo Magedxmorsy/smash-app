@@ -1,36 +1,34 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
 import SmashLogo from '../../../assets/branding/smash-logo.svg';
 import AddIcon from '../../../assets/icons/add.svg';
 
-export default function MobileHeader({ title, showLogo = false, rightIcon, onRightPress }) {
-  const statusBarHeight = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0;
-  
+export default function MobileHeader({ title, showLogo = false, rightIcon, onRightPress, RightIconComponent }) {
   return (
-    <View style={[styles.container, { paddingTop: statusBarHeight }]}>
+    <View style={styles.container}>
       <View style={styles.content}>
         {/* Left: Logo or Title */}
         {showLogo ? (
-  <View style={{ marginBottom: 0 }}>
-    <SmashLogo width={100} height={36} />
-  </View>
-) : (
-  <Text style={styles.title}>{title}</Text>
-)}
-        
+          <View style={{ marginBottom: 0 }}>
+            <SmashLogo width={100} height={36} />
+          </View>
+        ) : (
+          <Text style={styles.title}>{title}</Text>
+        )}
+
         {/* Right: Action Icon */}
         {rightIcon && (
-  <TouchableOpacity 
-    style={styles.rightButton}
-    onPress={onRightPress}
-    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-  >
-    <AddIcon width={32} height={32} />
-  </TouchableOpacity>
-)}
+          <TouchableOpacity
+            style={styles.rightButton}
+            onPress={onRightPress}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            {RightIconComponent ? <RightIconComponent width={32} height={32} /> : <AddIcon width={32} height={32} />}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -38,18 +36,16 @@ export default function MobileHeader({ title, showLogo = false, rightIcon, onRig
 
 const styles = StyleSheet.create({
   container: {
-    height: 68,
     backgroundColor: Colors.background,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   content: {
-    flex: 1,
+    height: 56,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.space4,
-    paddingBottom: Spacing.space4,
   },
   logo: {
     fontFamily: 'GeneralSans-Semibold',
@@ -69,8 +65,8 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: -8,  // Add this - moves it 8px right
-    marginBottom: -4, // Add this - aligns with logo baseline
+    marginRight: -8,
+    marginBottom: -4,
   },
   plusIcon: {
     fontFamily: 'GeneralSans-Semibold',

@@ -97,7 +97,6 @@ const styles = StyleSheet.create({
     lineHeight: Typography.headline100 * 1.18,
   },
   body: {
-    maxHeight: '70%',
   },
   bodyContent: {
     padding: Spacing.space4,

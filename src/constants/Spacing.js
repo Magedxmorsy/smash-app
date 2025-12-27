@@ -13,6 +13,19 @@ export const Spacing = {
   space16: 64,
   space20: 80,
   space24: 96,
+
+  // Component-specific sizes
+  iconSize: 24,
+  avatarSmall: 40,
+  avatarMedium: 72,
+  avatarLarge: 96,
+  buttonHeightLarge: 56,
+  buttonHeightMedium: 48,
+  listItemHeight: 56,
+  dividerHeight: 1,
+
+  // Special values
+  avatarOverlap: -12,
 };
 
 export const BorderRadius = {

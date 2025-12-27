@@ -768,9 +768,10 @@ Overflow: Scroll if needed
 **Layout:**
 ```
 Display: Flex column
-Alignment: Center
+Alignment: Center (horizontal and vertical)
 Padding: 32px (left/right)
 Max Width: 400px
+Position: Center of screen
 ```
 
 **Structure:**
@@ -781,38 +782,60 @@ Size: 214px × 214px
 Color: Neutral-300 (#C8C8C8) or context-dependent
 ```
 
-↓ 32px Space
+↓ 32px Space (Space-8)
 
 **2. Headline:**
 ```
 Font: Headline-100-bold (20px)
+Weight: Semibold (600)
 Color: Primary-300 (#281F42)
 Alignment: Center
+Line Height: 118%
 ```
 
-↓ 8px Space
+↓ 8px Space (Space-2)
 
 **3. Body:**
 ```
 Font: Body-200-medium (16px)
-Color: Neutral-400 (#6D6D6D)
+Weight: Medium (500)
+Color: Primary-300 (#281F42)
 Alignment: Center
+Max Width: 252px
+Line Height: 150%
 ```
 
-↓ 32px Space
+↓ 32px Space (Space-8)
 
 **4. CTA (Optional):**
 ```
-Type: Small button
+Type: Small button (hugs content)
 Variants: Primary, Secondary, Accent, or Ghost
 Alignment: Center
 ```
 
 **Examples:**
-- "No tournaments yet" + "Create tournament" button
-- "No ongoing tournaments" + "Create tournament" button
+- "No teams yet" + "Share tournament" button (secondary)
+- "No tournaments yet" + "Create tournament" button (primary)
+- "No ongoing tournaments" + "Create tournament" button (primary)
 - "No completed tournaments" + no button
 - "No updates yet" + no button
+
+**Component Usage:**
+```jsx
+<EmptyState
+  imageSource={require('path/to/image.png')}
+  headline="Invite friends to join!"
+  body="Share the tournament link with your friends."
+  button={
+    <Button
+      title="Share tournament"
+      variant="secondary"
+      fullWidth={false}
+    />
+  }
+/>
+```
 
 ---
 
