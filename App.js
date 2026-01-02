@@ -17,6 +17,8 @@ import { Alert } from 'react-native';
 import { Colors } from './src/constants/Colors';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { TournamentProvider } from './src/contexts/TournamentContext';
+import { NotificationProvider } from './src/contexts/NotificationContext';
+import { ToastProvider } from './src/contexts/ToastContext';
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
@@ -212,15 +214,6 @@ function MainApp() {
     setPendingVerification(null);
   };
 
-  const handleCreateTournament = (actionCallback) => {
-    if (!isAuthenticated) {
-      setPendingAction({ type: 'createTournament', callback: actionCallback });
-      setShowLoginModal(true);
-    } else if (actionCallback) {
-      actionCallback();
-    }
-  };
-
   const handleCreateAccount = () => {
     setPendingAction({ type: 'createAccount', callback: null });
     setShowLoginModal(true);
@@ -312,7 +305,6 @@ function MainApp() {
     <>
       <NavigationContainer linking={linking}>
         <TabNavigator
-          onCreateTournament={handleCreateTournament}
           onCreateAccount={handleCreateAccount}
         />
         <StatusBar style="dark" />
@@ -345,9 +337,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <TournamentProvider>
-          <MainApp />
-        </TournamentProvider>
+        <NotificationProvider>
+          <TournamentProvider>
+            <ToastProvider>
+              <MainApp />
+            </ToastProvider>
+          </TournamentProvider>
+        </NotificationProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

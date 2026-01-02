@@ -204,6 +204,7 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
         rightIcon={true}
         onRightPress={handleCreateTournament}
       />
+
       <ScrollView
         style={styles.content}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + Spacing.space4 }]}

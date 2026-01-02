@@ -1,0 +1,78 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This operation is for demo purposes and does not require authentication") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      uid: "demouser1",
+      email: "demouser1@example.com",
+      createdAt: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      uid: "demouser2",
+      email: "demouser2@example.com",
+      createdAt: "2024-01-01T00:00:00Z"
+    }
+  ])
+  product_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      name: "Example Product 1",
+      description: "This is an example product",
+      price: 20.00,
+      createdAt: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      name: "Example Product 2",
+      description: "This is another example product",
+      price: 30.00,
+      createdAt: "2024-01-01T00:00:00Z"
+    }
+  ])
+  order_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440004",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      orderDate: "2024-01-02T00:00:00Z",
+      status: "pending",
+      totalAmount: 50.00
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440005",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      orderDate: "2024-01-03T00:00:00Z",
+      status: "completed",
+      totalAmount: 80.00
+    }
+  ])
+  orderItem_insertMany(data: [
+    {
+      orderId: "550e8400-e29b-41d4-a716-446655440004",
+      productId: "550e8400-e29b-41d4-a716-446655440002",
+      quantity: 2,
+      unitPrice: 20.00
+    },
+    {
+      orderId: "550e8400-e29b-41d4-a716-446655440005",
+      productId: "550e8400-e29b-41d4-a716-446655440003",
+      quantity: 1,
+      unitPrice: 30.00
+    }
+  ])
+  review_insertMany(data: [
+    {
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      productId: "550e8400-e29b-41d4-a716-446655440002",
+      comment: "Great product!",
+      rating: 5,
+      createdAt: "2024-01-04T00:00:00Z"
+    },
+    {
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      productId: "550e8400-e29b-41d4-a716-446655440003",
+      comment: "Good product, but could be better",
+      rating: 4,
+      createdAt: "2024-01-05T00:00:00Z"
+    }
+  ])
+}

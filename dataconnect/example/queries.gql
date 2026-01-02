@@ -1,0 +1,36 @@
+mutation CreateUser @auth(level: USER, insecureReason: "This mutation is safe to expose to all logged in users.") {
+  user_insert(data: {
+    uid_expr: "auth.uid",
+    email: "default@example.com",
+    displayName: "New User"
+    createdAt_expr: "request.time"
+  })
+}
+
+query GetProduct @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  product(id: "a1b2c3d4-e5f6-7890-1234-567890abcdef") {
+    id
+    name
+    description
+    price
+  }
+}
+
+query ListProducts @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  products(limit: 10) {
+    id
+    name
+    price
+    imageUrl
+  }
+}
+
+mutation CreateReview($productId: UUID!, $comment: String!, $rating: Int!) @auth(level: USER, insecureReason: "This mutation is safe to expose to all logged in users.") {
+  review_insert(data: {
+    productId: $productId,
+    userId_expr: "auth.uid",
+    comment: $comment,
+    rating: $rating,
+    createdAt_expr: "request.time"
+  })
+}

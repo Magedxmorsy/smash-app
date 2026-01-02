@@ -36,7 +36,7 @@ export const Colors = {
   errorLight: '#FFE9E9',
   info: '#167DE3',
   infoLight: '#E8F5FF',
-  success: '#53A46E',
+  success: '#238544',
   successLight: '#DBFFE7',
   warning: '#CBBD25',
   warningLight: '#FFFCDD',
