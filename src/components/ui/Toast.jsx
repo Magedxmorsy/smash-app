@@ -78,13 +78,13 @@ export default function Toast({ visible, message, variant, onClose }) {
     >
       <View style={[styles.toast, variantStyles[variant]]}>
         <View style={styles.iconContainer}>
-          <LeftIcon width={24} height={24} fill={textAndIconColor} color={textAndIconColor} />
+          <LeftIcon width={24} height={24} color={textAndIconColor} />
         </View>
         <Text style={[styles.message, { color: textAndIconColor }]} numberOfLines={3}>
           {message}
         </Text>
         <TouchableOpacity onPress={onClose} hitSlop={hitSlop} style={styles.closeButton}>
-          <CloseIcon width={24} height={24} fill={textAndIconColor} color={textAndIconColor} />
+          <CloseIcon width={24} height={24} color={textAndIconColor} />
         </TouchableOpacity>
       </View>
     </Animated.View>
