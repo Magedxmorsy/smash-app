@@ -91,7 +91,7 @@ export default function Button({
 const styles = StyleSheet.create({
   button: {
     minHeight: Spacing.buttonHeightLarge,
-    borderRadius: BorderRadius.radius4,
+    borderRadius: Spacing.buttonHeightLarge / 2, // Fully rounded (pill shape)
     paddingVertical: Spacing.space2,
     paddingHorizontal: Spacing.space4,
     justifyContent: 'center',
@@ -100,6 +100,7 @@ const styles = StyleSheet.create({
   },
   buttonMedium: {
     minHeight: Spacing.buttonHeightMedium,
+    borderRadius: Spacing.buttonHeightMedium / 2, // Fully rounded for medium size
     paddingVertical: Spacing.space2,
   },
   buttonHug: {

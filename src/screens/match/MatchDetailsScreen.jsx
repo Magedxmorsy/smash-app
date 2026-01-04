@@ -12,6 +12,10 @@ import Card from '../../components/ui/Card';
 import DetailsListItem from '../../components/ui/DetailsListItem';
 import Team from '../../components/ui/Team';
 import RecordScoreModal from '../../components/match/RecordScoreModal';
+import { useTournaments } from '../../contexts/TournamentContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { createNotificationsForUsers } from '../../services/notificationService';
 import ChevronLeft from '../../../assets/icons/chevronleft.svg';
 import ShareIcon from '../../../assets/icons/share.svg';
 import TrophyIcon from '../../../assets/icons/compete.svg';
@@ -24,6 +28,9 @@ import VersusIcon from '../../../assets/icons/versus.svg';
 export default function MatchDetailsScreen({ navigation, route }) {
   const { match: initialMatch } = route.params;
   const [match, setMatch] = useState(initialMatch);
+  const { updateTournament, tournaments } = useTournaments();
+  const { showToast } = useToast();
+  const { user } = useAuth();
   const [rulesExpanded, setRulesExpanded] = useState(false);
   const [showRecordScoreModal, setShowRecordScoreModal] = useState(false);
   const animatedHeight = useRef(new Animated.Value(0)).current;
@@ -35,6 +42,41 @@ export default function MatchDetailsScreen({ navigation, route }) {
       useNativeDriver: false,
     }).start();
   }, [rulesExpanded]);
+
+  // Check if current user is tournament host
+  const isAdmin = match?.tournamentId && tournaments?.length > 0
+    ? tournaments.find(t => t.id === match.tournamentId)?.hostId === user?.uid
+    : false;
+
+  // Check if current user is a player in this match
+  const isUserMatch = () => {
+    if (!match || !user) return false;
+
+    const userId = user.uid;
+    const teamA = match.leftTeam || match.team1;
+    const teamB = match.rightTeam || match.team2;
+
+    if (!teamA || !teamB) return false;
+
+    return (
+      teamA.player1?.id === userId ||
+      teamA.player2?.id === userId ||
+      teamB.player1?.id === userId ||
+      teamB.player2?.id === userId
+    );
+  };
+
+  // Check if current user can record/edit score for this match
+  const canRecordScore = () => {
+    // Tournament host can record any match score
+    if (isAdmin) return true;
+
+    // Players can only record their own match scores
+    if (isUserMatch()) return true;
+
+    // Everyone else cannot record scores
+    return false;
+  };
 
   const handleAddToCalendar = async () => {
     try {
@@ -90,34 +132,111 @@ export default function MatchDetailsScreen({ navigation, route }) {
     setShowRecordScoreModal(true);
   };
 
-  const handleSaveScore = (scores) => {
-    console.log('Saved scores:', scores);
+  const handleSaveScore = async (scores) => {
+    // Validate permissions before saving
+    if (!canRecordScore()) {
+      showToast('You do not have permission to record this score', 'error');
+      return;
+    }
 
-    // Calculate winning team by counting sets won
-    let teamAWins = 0;
-    let teamBWins = 0;
+    if (!match.tournamentId) {
+      showToast('Cannot save score: tournament information missing', 'error');
+      return;
+    }
 
-    scores.forEach(set => {
-      const scoreA = parseInt(set.teamA);
-      const scoreB = parseInt(set.teamB);
-      if (scoreA > scoreB) {
-        teamAWins++;
-      } else if (scoreB > scoreA) {
-        teamBWins++;
+    try {
+      // Calculate winning team by counting sets won
+      let teamAWins = 0;
+      let teamBWins = 0;
+
+      scores.forEach(set => {
+        const scoreA = parseInt(set.teamA);
+        const scoreB = parseInt(set.teamB);
+        if (scoreA > scoreB) {
+          teamAWins++;
+        } else if (scoreB > scoreA) {
+          teamBWins++;
+        }
+      });
+
+      const winningTeam = teamAWins > teamBWins ? 'left' : 'right';
+
+      // Update local state
+      const updatedMatch = {
+        ...match,
+        score: scores,
+        scoreRecorded: true,
+        winningTeam: winningTeam,
+      };
+      setMatch(updatedMatch);
+
+      // Get the tournament and update the specific match
+      const tournament = tournaments.find(t => t.id === match.tournamentId);
+
+      if (!tournament) {
+        throw new Error('Tournament not found');
       }
-    });
 
-    const winningTeam = teamAWins > teamBWins ? 'left' : 'right';
+      // Update matches array - filter out undefined values to avoid Firestore errors
+      const updatedMatches = tournament.matches.map(m => {
+        if (m.id === match.id) {
+          const updatedMatch = { ...m, score: scores, scoreRecorded: true, winningTeam };
+          // Remove any undefined fields
+          Object.keys(updatedMatch).forEach(key => {
+            if (updatedMatch[key] === undefined) {
+              delete updatedMatch[key];
+            }
+          });
+          return updatedMatch;
+        }
+        return m;
+      });
 
-    // Update match with scores and winning team
-    setMatch({
-      ...match,
-      score: scores,
-      scoreRecorded: true,
-      winningTeam: winningTeam,
-    });
+      await updateTournament(match.tournamentId, {
+        matches: updatedMatches,
+      });
 
-    // TODO: Save scores to database
+      // Determine if this is adding or updating a score
+      const isUpdating = match.scoreRecorded === true;
+      const action = isUpdating ? 'score_updated' : 'score_added';
+      const actionText = isUpdating ? 'updated' : 'added';
+
+      // Get all 4 players in the match
+      const teamA = match.leftTeam || match.team1;
+      const teamB = match.rightTeam || match.team2;
+      const playerIds = [
+        teamA.player1?.id,
+        teamA.player2?.id,
+        teamB.player1?.id,
+        teamB.player2?.id,
+      ].filter(id => id && id !== user?.uid); // Exclude the current user
+
+      // Send notifications to all players in the match (except the one who recorded the score)
+      if (playerIds.length > 0 && user && tournament) {
+        await createNotificationsForUsers(playerIds, {
+          type: 'match',
+          action,
+          title: isUpdating ? 'Score Updated' : 'Score Added',
+          message: `${user.displayName || `${user.firstName} ${user.lastName}`} ${actionText} score to your recent match.`,
+          metadata: {
+            tournamentId: match.tournamentId,
+            tournamentName: tournament.name,
+            matchId: match.id,
+          },
+          playerInfo: {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatarUri: user.avatarUri,
+          },
+        });
+      }
+
+      showToast('Score recorded successfully!', 'success');
+      setShowRecordScoreModal(false);
+    } catch (error) {
+      console.error('Error saving score:', error);
+      showToast('Failed to save score. Please try again.', 'error');
+    }
   };
 
   const handleDirections = () => {
@@ -286,14 +405,14 @@ export default function MatchDetailsScreen({ navigation, route }) {
               size="large"
               onPress={handleAddToCalendar}
             />
-          ) : (
+          ) : canRecordScore() ? (
             <Button
               title={scoreRecorded ? "Edit score" : "Record score"}
               variant="accent"
               size="large"
               onPress={handleRecordScore}
             />
-          )}
+          ) : null}
         </Card>
 
         {/* Location Card */}
@@ -304,7 +423,7 @@ export default function MatchDetailsScreen({ navigation, route }) {
             </View>
             <View style={styles.locationTextContainer}>
               <Text style={styles.locationTitle}>
-                {match.location} | Court: {match.court || '7'}
+                {match.location} | {match.court?.includes('Court') ? match.court : `Court: ${match.court || '7'}`}
               </Text>
               <Text style={styles.locationAddress}>{match.address}</Text>
             </View>

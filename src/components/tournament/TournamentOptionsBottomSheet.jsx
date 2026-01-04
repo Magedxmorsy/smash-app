@@ -7,6 +7,7 @@ import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import Button from '../ui/Button';
+import LinkButton from '../ui/LinkButton';
 
 import EditIcon from '../../../assets/icons/edit.svg';
 import TrashIcon from '../../../assets/icons/trash.svg';
@@ -16,14 +17,12 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
   const insets = useSafeAreaInsets();
 
   const handleEdit = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (onEdit) {
       onEdit();
     }
   };
 
   const handleDelete = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
     if (onDelete) {
       onDelete();
@@ -31,7 +30,6 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
   };
 
   const handleFillDummyData = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
     if (onFillDummyData) {
       onFillDummyData();
@@ -50,29 +48,39 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
       animationIn="slideInUp"
       animationOut="slideOutDown"
     >
-      <View style={[styles.container, { paddingBottom: insets.bottom + Spacing.space4 }]}>
+      <View style={[styles.container, { paddingBottom: insets.bottom + Spacing.space1 }]}>
         {/* Swipe Handle */}
         <View style={styles.handleContainer}>
           <View style={styles.handle} />
         </View>
 
         {/* Edit Tournament Option */}
-        <TouchableOpacity style={styles.option} onPress={handleEdit}>
-          <EditIcon width={32} height={32} color={Colors.primary300} />
-          <Text style={styles.optionText}>Edit tournament</Text>
-        </TouchableOpacity>
+        <LinkButton
+          title="Edit tournament"
+          icon={<EditIcon />}
+          iconSize={32}
+          variant="primary"
+          onPress={handleEdit}
+        />
 
         {/* Fill with Dummy Data Option (Testing Only) */}
-        <TouchableOpacity style={styles.option} onPress={handleFillDummyData}>
-          <TeamIcon width={32} height={32} color={Colors.primary300} />
-          <Text style={styles.optionText}>Fill with dummy teams (Test)</Text>
-        </TouchableOpacity>
+        <LinkButton
+          title="Fill with dummy teams (Test)"
+          icon={<TeamIcon />}
+          iconSize={32}
+          variant="primary"
+          onPress={handleFillDummyData}
+        />
 
         {/* Delete Tournament Option */}
-        <TouchableOpacity style={styles.optionDelete} onPress={handleDelete}>
-          <TrashIcon width={32} height={32} color={Colors.error} stroke={Colors.error} />
-          <Text style={styles.optionTextDelete}>Delete tournament</Text>
-        </TouchableOpacity>
+        <LinkButton
+          title="Delete tournament"
+          icon={<TrashIcon />}
+          iconSize={32}
+          variant="destructive"
+          onPress={handleDelete}
+          style={styles.deleteOption}
+        />
 
         {/* Cancel Button */}
         <View style={styles.buttonsContainer}>
@@ -111,30 +119,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral300,
     borderRadius: 2,
   },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.space3,
-    paddingVertical: Spacing.space2,
-    paddingHorizontal: Spacing.space2,
-  },
-  optionText: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.headline100,
-    color: Colors.primary300,
-  },
-  optionDelete: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.space3,
-    paddingVertical: Spacing.space2,
-    paddingHorizontal: Spacing.space2,
+  deleteOption: {
     marginBottom: Spacing.space4,
-  },
-  optionTextDelete: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.headline100,
-    color: Colors.error,
   },
   buttonsContainer: {
     gap: Spacing.space2,

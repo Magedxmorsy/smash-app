@@ -1,13 +1,75 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
 import MobileHeader from '../../components/ui/MobileHeader';
+import NotificationItem from '../../components/notification/NotificationItem';
+import { useNotifications } from '../../contexts/NotificationContext';
 
-export default function UpdatesScreen() {
-  // Empty array to show empty state - change to add notifications
-  const notifications = [];
+export default function UpdatesScreen({ navigation }) {
+  const { notifications, loading, markAsRead } = useNotifications();
+
+  const handleNotificationPress = (notification) => {
+    // Mark notification as read
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+
+    // Deep link to tournament or match if metadata exists
+    if (notification.metadata?.tournamentId) {
+      navigation.navigate('CompeteTab', {
+        screen: 'TournamentDetails',
+        params: { tournamentId: notification.metadata.tournamentId }
+      });
+    } else if (notification.metadata?.matchId) {
+      navigation.navigate('HomeTab', {
+        screen: 'MatchDetails',
+        params: { matchId: notification.metadata.matchId }
+      });
+    }
+  };
+
+  // Helper to create action button for specific notification types
+  const getActionButton = (notification) => {
+    // "View" button for score notifications
+    if (notification.action === 'score_added' || notification.action === 'score_updated') {
+      return {
+        label: 'View',
+        onPress: () => handleNotificationPress(notification),
+      };
+    }
+
+    // "Start" button for tournament_full notifications
+    if (notification.action === 'tournament_full') {
+      return {
+        label: 'Start',
+        onPress: () => {
+          markAsRead(notification.id);
+          navigation.navigate('CompeteTab', {
+            screen: 'TournamentDetails',
+            params: {
+              tournamentId: notification.metadata.tournamentId,
+              openStartSheet: true, // Signal to open start tournament sheet
+            }
+          });
+        },
+      };
+    }
+
+    return null;
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <MobileHeader title="Updates" rightIcon={false} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.accent300} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -36,21 +98,16 @@ export default function UpdatesScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: 60 + Spacing.space4 }]}
           showsVerticalScrollIndicator={false}
         >
-          {notifications.map((notification) => (
-            <View
+          {notifications.map((notification, index) => (
+            <NotificationItem
               key={notification.id}
-              style={[
-                styles.notificationItem,
-                !notification.read && styles.notificationUnread,
-              ]}
-            >
-              <View style={styles.notificationHeader}>
-                <Text style={styles.notificationTitle}>{notification.title}</Text>
-                <Text style={styles.notificationTime}>{notification.time}</Text>
-              </View>
-              <Text style={styles.notificationMessage}>{notification.message}</Text>
-              {!notification.read && <View style={styles.unreadDot} />}
-            </View>
+              notification={{
+                ...notification,
+                actionButton: getActionButton(notification),
+              }}
+              onPress={null} // Disabled for now - navigation needs to be fixed
+              showDivider={index < notifications.length - 1}
+            />
           ))}
         </ScrollView>
       )}
@@ -67,54 +124,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: Spacing.space4,
+    paddingTop: Spacing.space2, // Small padding at top
   },
-  notificationItem: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 16,
-    padding: Spacing.space4,
-    marginBottom: Spacing.space3,
-    position: 'relative',
-  },
-  notificationUnread: {
-    backgroundColor: Colors.accent100,
-    borderWidth: 1,
-    borderColor: Colors.accent300,
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.space2,
-  },
-  notificationTitle: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.body100,
-    color: Colors.primary300,
+  loadingContainer: {
     flex: 1,
-    marginRight: Spacing.space2,
-  },
-  notificationTime: {
-    fontFamily: 'GeneralSans-Medium',
-    fontSize: Typography.body300,
-    color: Colors.neutral400,
-  },
-  notificationMessage: {
-    fontFamily: 'GeneralSans-Medium',
-    fontSize: Typography.body200,
-    color: Colors.neutral500,
-    lineHeight: Typography.body200 * 1.4,
-  },
-  unreadDot: {
-    position: 'absolute',
-    top: Spacing.space4,
-    right: Spacing.space4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.accent300,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyStateContainer: {
     flex: 1,

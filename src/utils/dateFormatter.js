@@ -147,7 +147,7 @@ export function isPastDate(date) {
 }
 
 /**
- * Get relative time: "in 2 days", "yesterday", "today"
+ * Get relative time: "in 2 days", "yesterday", "today", "2 hours ago", "just now"
  *
  * @param {Date|string} date - Date object or ISO string
  * @returns {string} Relative time string
@@ -167,14 +167,41 @@ export function getRelativeTime(date) {
   }
 
   const now = new Date();
-  const diffMs = dateObj - now;
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const diffMs = now - dateObj; // Changed to now - date for "ago" format
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
-  if (diffDays === -1) return 'Yesterday';
-  if (diffDays > 1 && diffDays < 7) return `In ${diffDays} days`;
-  if (diffDays < -1 && diffDays > -7) return `${Math.abs(diffDays)} days ago`;
+  // Past times (most common for notifications)
+  if (diffMs >= 0) {
+    if (diffSeconds < 60) {
+      return 'just now';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} ${diffMinutes === 1 ? 'min' : 'mins'} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else if (diffWeeks < 4) {
+      return `${diffWeeks} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`;
+    } else if (diffMonths < 12) {
+      return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+    } else {
+      const diffYears = Math.floor(diffMonths / 12);
+      return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
+    }
+  }
+
+  // Future times (less common for notifications, but useful for tournaments)
+  const futureDiffDays = Math.abs(Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  if (futureDiffDays === 0) return 'Today';
+  if (futureDiffDays === 1) return 'Tomorrow';
+  if (futureDiffDays < 7) return `In ${futureDiffDays} days`;
 
   return formatShortDate(dateObj);
 }

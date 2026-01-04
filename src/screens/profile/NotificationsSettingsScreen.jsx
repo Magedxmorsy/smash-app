@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -6,43 +6,46 @@ import { Spacing, BorderRadius } from '../../constants/Spacing';
 import CardGroup from '../../components/ui/CardGroup';
 import ListItem from '../../components/ui/ListItem';
 import ChevronLeftIcon from '../../../assets/icons/chevronleft.svg';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 export default function NotificationsSettingsScreen({ navigation }) {
-  const [allNotifications, setAllNotifications] = useState(true);
-  const [tournamentNotifications, setTournamentNotifications] = useState(true);
-  const [teamNotifications, setTeamNotifications] = useState(true);
-  const [matchNotifications, setMatchNotifications] = useState(true);
+  const { settings, updateSettings } = useNotifications();
+
+  const allNotifications = settings.allNotifications;
+  const tournamentNotifications = settings.tournamentNotifications;
+  const teamNotifications = settings.teamNotifications;
+  const matchNotifications = settings.matchNotifications;
 
   const handleMasterToggle = (value) => {
-    setAllNotifications(value);
-    // When master is turned off, turn off all others
-    if (!value) {
-      setTournamentNotifications(false);
-      setTeamNotifications(false);
-      setMatchNotifications(false);
-    } else {
-      // When master is turned on, turn on all others
-      setTournamentNotifications(true);
-      setTeamNotifications(true);
-      setMatchNotifications(true);
-    }
+    updateSettings({
+      allNotifications: value,
+      tournamentNotifications: value,
+      teamNotifications: value,
+      matchNotifications: value
+    });
   };
 
-  const handleCategoryToggle = (setter, value) => {
-    setter(value);
+  const handleCategoryToggle = (category, value) => {
+    const newSettings = {
+      ...settings,
+      [category]: value
+    };
+
     // If any category is turned off, master should be off
     if (!value) {
-      setAllNotifications(false);
+      newSettings.allNotifications = false;
     } else {
       // If all categories are on, turn master on
       const allOn =
-        (setter === setTournamentNotifications ? value : tournamentNotifications) &&
-        (setter === setTeamNotifications ? value : teamNotifications) &&
-        (setter === setMatchNotifications ? value : matchNotifications);
+        (category === 'tournamentNotifications' ? value : tournamentNotifications) &&
+        (category === 'teamNotifications' ? value : teamNotifications) &&
+        (category === 'matchNotifications' ? value : matchNotifications);
       if (allOn) {
-        setAllNotifications(true);
+        newSettings.allNotifications = true;
       }
     }
+
+    updateSettings(newSettings);
   };
 
   return (
@@ -92,7 +95,7 @@ export default function NotificationsSettingsScreen({ navigation }) {
             rightComponent={
               <Switch
                 value={tournamentNotifications}
-                onValueChange={(value) => handleCategoryToggle(setTournamentNotifications, value)}
+                onValueChange={(value) => handleCategoryToggle('tournamentNotifications', value)}
               />
             }
           />
@@ -103,7 +106,7 @@ export default function NotificationsSettingsScreen({ navigation }) {
             rightComponent={
               <Switch
                 value={teamNotifications}
-                onValueChange={(value) => handleCategoryToggle(setTeamNotifications, value)}
+                onValueChange={(value) => handleCategoryToggle('teamNotifications', value)}
               />
             }
           />
@@ -114,7 +117,7 @@ export default function NotificationsSettingsScreen({ navigation }) {
             rightComponent={
               <Switch
                 value={matchNotifications}
-                onValueChange={(value) => handleCategoryToggle(setMatchNotifications, value)}
+                onValueChange={(value) => handleCategoryToggle('matchNotifications', value)}
               />
             }
           />

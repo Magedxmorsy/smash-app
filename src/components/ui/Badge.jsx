@@ -42,7 +42,7 @@ export default function Badge({ variant = 'registration', label, style }) {
 
   return (
     <View style={[styles.badge, getVariantStyle(), style]}>
-      <Text style={[styles.text, getTextStyle()]}>{label.toUpperCase()}</Text>
+      <Text style={[styles.text, getTextStyle()]}>{label?.toUpperCase() || ''}</Text>
     </View>
   );
 }

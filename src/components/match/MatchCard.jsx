@@ -31,6 +31,7 @@ export default function MatchCard({
   onPress,
   onViewDetails,
   highlightBorder = false,
+  canRecord = true,
 }) {
   // Add defensive checks for missing team data
   if (!leftTeam || !rightTeam || !leftTeam.player1 || !rightTeam.player1) {
@@ -139,7 +140,7 @@ export default function MatchCard({
         />
       )}
 
-      {isPast && onAddScore && (
+      {isPast && onAddScore && canRecord && (
         <Button
           title={scoreRecorded ? "Edit score" : "Record score"}
           variant="ghost"

@@ -109,23 +109,16 @@ export const subscribeToNotificationSettings = (userId, callback) => {
       if (docSnapshot.exists()) {
         callback(docSnapshot.data());
       } else {
-        // Document doesn't exist yet, create it with defaults
-        // This handles the case of existing users who don't have settings yet
-        console.log('Creating default notification settings for user:', userId);
-        createDefaultNotificationSettings(userId)
-          .then(() => {
-            callback(DEFAULT_SETTINGS);
-          })
-          .catch((error) => {
-            console.warn('Could not create default settings, using defaults:', error.message);
-            callback(DEFAULT_SETTINGS);
-          });
+        // Document doesn't exist yet - just use defaults without trying to create
+        // Settings will be created when the user updates them for the first time
+        callback(DEFAULT_SETTINGS);
       }
     },
     (error) => {
       // Handle permissions errors gracefully
       if (error.code === 'permission-denied') {
-        console.warn('Permission denied for settings. This may happen if the user document does not exist yet. Using default settings.');
+        // This is expected when user document doesn't exist yet
+        // Just silently use default settings
       } else {
         console.error('Error in settings subscription:', error.message);
       }

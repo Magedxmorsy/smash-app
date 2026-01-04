@@ -18,6 +18,28 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
   // Refs for all inputs (6 total: 3 for Team A + 3 for Team B)
   const inputRefs = useRef([]);
 
+  // Pre-fill scores when modal opens with existing match scores
+  useEffect(() => {
+    if (visible && match?.score) {
+      const newTeamAScores = ['', '', ''];
+      const newTeamBScores = ['', '', ''];
+
+      match.score.forEach((set, index) => {
+        if (index < 3) {
+          newTeamAScores[index] = set.teamA.toString();
+          newTeamBScores[index] = set.teamB.toString();
+        }
+      });
+
+      setTeamAScores(newTeamAScores);
+      setTeamBScores(newTeamBScores);
+    } else if (visible) {
+      // Reset to empty if no scores
+      setTeamAScores(['', '', '']);
+      setTeamBScores(['', '', '']);
+    }
+  }, [visible, match]);
+
   useEffect(() => {
     if (visible && inputRefs.current[0]) {
       // Small delay to ensure modal is fully rendered
@@ -111,6 +133,12 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
 
   if (!match) return null;
 
+  // Handle both leftTeam/rightTeam and team1/team2 property names
+  const teamA = match.leftTeam || match.team1;
+  const teamB = match.rightTeam || match.team2;
+
+  if (!teamA || !teamB) return null;
+
   return (
     <Modal
       visible={visible}
@@ -149,11 +177,11 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
                     <View style={styles.avatarsContainer}>
                       <Avatar
                         size="small"
-                        source={match.leftTeam.player1.avatarSource}
+                        name={`${teamA.player1.firstName} ${teamA.player1.lastName}`}
                       />
                       <Avatar
                         size="small"
-                        source={match.leftTeam.player2.avatarSource}
+                        name={`${teamA.player2.firstName} ${teamA.player2.lastName}`}
                       />
                     </View>
                   </View>
@@ -190,11 +218,11 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
                     <View style={styles.avatarsContainer}>
                       <Avatar
                         size="small"
-                        source={match.rightTeam.player1.avatarSource}
+                        name={`${teamB.player1.firstName} ${teamB.player1.lastName}`}
                       />
                       <Avatar
                         size="small"
-                        source={match.rightTeam.player2.avatarSource}
+                        name={`${teamB.player2.firstName} ${teamB.player2.lastName}`}
                       />
                     </View>
                   </View>

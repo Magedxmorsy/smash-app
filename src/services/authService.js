@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { createDefaultNotificationSettings } from './notificationSettingsService';
 
 /**
  * Sign up a new user with email and password
@@ -41,6 +42,9 @@ export const signUp = async (email, password, displayName) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Create default notification settings for new user
+    await createDefaultNotificationSettings(user.uid);
 
     // In a real app, you would send this code via email using a service like SendGrid
     // For now, we'll just log it (you can implement email sending later)
@@ -80,6 +84,9 @@ export const createUserWithVerificationCode = async (email) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Create default notification settings for new user
+    await createDefaultNotificationSettings(user.uid);
 
     // In a real app, send this code via email
     console.log(`🔐 Verification code for ${email}: ${verificationCode}`);

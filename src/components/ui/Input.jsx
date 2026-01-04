@@ -181,7 +181,11 @@ const styles = StyleSheet.create({
     lineHeight: Typography.body300 * 1.5,
   },
   errorText: {
+    fontSize: Typography.body300,
+    fontFamily: 'GeneralSans-Medium',
     color: Colors.error,
+    marginTop: Spacing.space1,
+    lineHeight: Typography.body300 * 1.5,
   },
   inputWithIcon: {
     paddingRight: 48,

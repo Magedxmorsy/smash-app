@@ -250,8 +250,18 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
         visible={modalVisible}
         onClose={handleCloseModal}
         onTournamentCreated={(tournament) => {
-          // Could navigate to tournament or just show success
-          console.log('Tournament created:', tournament);
+          // Navigate to the newly created tournament in Compete tab
+          if (tournament?.id) {
+            // First get the root navigation (tab navigator)
+            const rootNavigation = navigation.getParent();
+            if (rootNavigation) {
+              // Navigate to CompeteTab, then to TournamentDetails screen
+              rootNavigation.navigate('CompeteTab', {
+                screen: 'TournamentDetails',
+                params: { tournamentId: tournament.id }
+              });
+            }
+          }
         }}
       />
 

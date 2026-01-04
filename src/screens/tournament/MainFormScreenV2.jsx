@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Platform, Alert, Switch, Keyboard, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Input from '../../components/ui/Input';
 import CardGroup from '../../components/ui/CardGroup';
 import ListItem from '../../components/ui/ListItem';
 import Button from '../../components/ui/Button';
-import Banner from '../../components/ui/Banner';
 import { useTournamentForm } from '../../contexts/TournamentFormContext';
 import { useTournaments } from '../../contexts/TournamentContext';
-import { useToast } from '../../contexts/ToastContext';
 import { Spacing } from '../../constants/Spacing';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -20,14 +16,18 @@ import LocationIcon from '../../../assets/icons/location.svg';
 import BallIcon from '../../../assets/icons/ball.svg';
 import CalendarIcon from '../../../assets/icons/calendar.svg';
 import TimeIcon from '../../../assets/icons/time.svg';
-import CompeteIcon from '../../../assets/icons/compete.svg';
 import TeamIcon from '../../../assets/icons/team.svg';
 import RulesIcon from '../../../assets/icons/rules.svg';
 
-export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, tournament }) {
-  const insets = useSafeAreaInsets();
+export default function MainFormScreenV2({
+  editMode,
+  onSave,
+  onClose,
+  tournament,
+  onNavigateToCourts,
+  onNavigateToRules
+}) {
   const { createTournament, updateTournament } = useTournaments();
-  const { showToast } = useToast();
 
   const {
     tournamentName,
@@ -39,8 +39,6 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     setDate,
     time,
     setTime,
-    format,
-    setFormat,
     teamCount,
     setTeamCount,
     rules,
@@ -54,7 +52,6 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Check if tournament has started (not in REGISTRATION phase)
   const isTournamentStarted = editMode && tournament && tournament.status !== 'REGISTRATION';
@@ -128,7 +125,7 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         location: location.trim() || 'Location TBD',
         courts: courtNumbers.trim() || null,
         dateTime: tournamentDateTime ? tournamentDateTime.toISOString() : null,
-        format: format || 'World cup',
+        format: 'World cup format',
         teamCount: teamCount || 8,
         rules: rules.trim() || 'Standard tournament rules apply.',
         joinAsPlayer: joinAsPlayer,
@@ -177,13 +174,6 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         resultTournament = await createTournament(tournamentData);
       }
 
-      // Show success toast
-      if (editMode) {
-        showToast('Tournament updated successfully', 'success');
-      } else {
-        showToast('Tournament created successfully', 'success');
-      }
-
       // Notify parent
       if (onSave) {
         onSave(resultTournament);
@@ -195,7 +185,7 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
       }
     } catch (error) {
       console.error('Error creating/updating tournament:', error);
-      showToast('Failed to save tournament. Please try again.', 'error');
+      Alert.alert('Error', 'Failed to save tournament. Please try again.');
     } finally {
       setIsCreating(false);
     }
@@ -237,30 +227,15 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     return count ? `${count} teams` : '';
   };
 
-  // Team counts designed to prevent 2-team groups:
-  // - 6 teams: 2 groups of 3
-  // - 8+ teams: All divisible by 4 for even 4-team groups
-  const teamOptions = [6, 8, 12, 16, 20, 24, 32];
+  const teamOptions = [6, 8, 10, 12, 16, 20, 24, 32];
 
   return (
-    <View style={styles.wrapper}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.container, { paddingBottom: 100 + insets.bottom }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-      {isTournamentStarted && !bannerDismissed && (
-        <View style={styles.bannerContainer}>
-          <Banner
-            variant="info"
-            message="Tournament has started. Format and team count can't be changed."
-            dismissible={true}
-            onClose={() => setBannerDismissed(true)}
-          />
-        </View>
-      )}
-
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <Input
         label="Name"
         placeholder="e.g. Amsterdam Padel Bros"
@@ -269,31 +244,28 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
           setTournamentName(value);
           if (errors.name) setErrors({ ...errors, name: '' });
         }}
+        disabled={isTournamentStarted}
         error={errors.name}
       />
 
-      <Input
-        label="Location"
-        placeholder="Enter tournament location"
-        value={location}
-        onChangeText={(value) => {
-          setLocation(value);
-          if (errors.location) setErrors({ ...errors, location: '' });
-        }}
-        error={errors.location}
-        leftIcon={<LocationIcon width={24} height={24} />}
-      />
-
       <CardGroup title="Details">
+        <ListItem
+          editable={true}
+          icon={<LocationIcon width={24} height={24} />}
+          placeholder="Enter club location"
+          value={location}
+          onChangeText={(value) => {
+            setLocation(value);
+            if (errors.location) setErrors({ ...errors, location: '' });
+          }}
+          error={errors.location}
+        />
 
         <ListItem
           icon={<BallIcon width={24} height={24} />}
           placeholder="Add courts (Optional)"
           value={courtNumbers ? `Courts: ${courtNumbers}` : ''}
-          onPress={() => {
-            console.log('🔵 Courts pressed! Navigating...');
-            onNavigate('courts');
-          }}
+          onPress={onNavigateToCourts}
           useChevronRight={true}
           editable={false}
         />
@@ -351,20 +323,6 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
           )}
         </>
 
-        <ListItem
-          icon={<CompeteIcon width={24} height={24} />}
-          placeholder="Tournament format"
-          value={format}
-          onPress={() => {
-            if (isTournamentStarted) return;
-            console.log('🔵 Format pressed! Navigating...');
-            onNavigate('format');
-          }}
-          useChevronRight={true}
-          editable={false}
-          disabled={isTournamentStarted}
-        />
-
         <>
           <ListItem
             icon={<TeamIcon width={24} height={24} />}
@@ -404,38 +362,43 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         </>
       </CardGroup>
 
-      <CardGroup title="Rules">
+      <CardGroup title="Options">
         <ListItem
           icon={<RulesIcon width={24} height={24} />}
           placeholder="Add custom rules (Optional)"
           value={rules}
-          onPress={() => {
-            console.log('🔵 Rules pressed! Navigating...');
-            onNavigate('rules');
-          }}
+          onPress={onNavigateToRules}
           useChevronRight={true}
           editable={false}
         />
-      </CardGroup>
 
-      <CardGroup title="Host options">
-        <View>
-          <View style={styles.switchRow}>
-            <View style={styles.switchContent}>
-              <TeamIcon width={24} height={24} color={Colors.primary300} />
-              <Text style={styles.switchLabel}>Join as player</Text>
-            </View>
-            <Switch
-              value={joinAsPlayer}
-              onValueChange={setJoinAsPlayer}
-            />
+        <View style={styles.switchRow}>
+          <View style={styles.switchContent}>
+            <TeamIcon width={24} height={24} color={Colors.primary300} />
+            <Text style={styles.switchLabel}>Join as player</Text>
           </View>
-          <Text style={styles.switchDescription}>
-            Add yourself as a participant
-          </Text>
+          <Switch
+            value={joinAsPlayer}
+            onValueChange={setJoinAsPlayer}
+          />
         </View>
       </CardGroup>
 
+      {isTournamentStarted && (
+        <View style={styles.clarificationBox}>
+          <Text style={styles.clarificationText}>
+            <Text style={styles.clarificationBold}>Note:</Text> This tournament has already started.
+            You can only edit the location, date, time, and rules. Changes to location or date/time will notify all participants.
+          </Text>
+        </View>
+      )}
+
+      <Button
+        title={isCreating ? (editMode ? "Saving..." : "Creating...") : (editMode ? "Save changes" : "Create tournament")}
+        onPress={handleCreate}
+        variant="primary"
+        disabled={isCreating}
+      />
 
       {/* Date Picker Modal (Android only) */}
       {showDatePicker && Platform.OS === 'android' && (
@@ -477,25 +440,11 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
           ))}
         </Picker>
       )}
-      </ScrollView>
-
-      {/* Sticky Button */}
-      <View style={[styles.stickyButton, { paddingBottom: Spacing.space1 + insets.bottom }]}>
-        <Button
-          title={isCreating ? (editMode ? "Saving..." : "Creating...") : (editMode ? "Save changes" : "Create tournament")}
-          onPress={handleCreate}
-          variant="primary"
-          disabled={isCreating}
-        />
-      </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
@@ -503,17 +452,7 @@ const styles = StyleSheet.create({
     gap: Spacing.space4,
     paddingHorizontal: Spacing.space4,
     paddingTop: Spacing.space4,
-  },
-  bannerContainer: {
-    marginBottom: Spacing.space2, // 8px
-  },
-  stickyButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: Spacing.space4,
-    backgroundColor: Colors.background,
+    paddingBottom: Spacing.space8,
   },
   pickerContainer: {
     paddingVertical: Spacing.space2,
@@ -545,13 +484,21 @@ const styles = StyleSheet.create({
     fontSize: Typography.body200,
     color: Colors.primary300,
   },
-  switchDescription: {
+  clarificationBox: {
+    backgroundColor: Colors.primary50,
+    borderRadius: 12,
+    padding: Spacing.space4,
+    borderWidth: 1,
+    borderColor: Colors.primary100,
+  },
+  clarificationText: {
     fontFamily: 'GeneralSans-Regular',
-    fontSize: Typography.body200,
+    fontSize: Typography.body300,
     color: Colors.neutral400,
-    paddingLeft: Spacing.space4 + 24 + Spacing.space3, // Card padding + icon width + gap
-    paddingRight: Spacing.space4,
-    paddingBottom: Spacing.space4,
-    marginTop: -Spacing.space2, // Pull description closer to toggle
+    lineHeight: Typography.body300 * 1.5,
+  },
+  clarificationBold: {
+    fontFamily: 'GeneralSans-Semibold',
+    color: Colors.primary300,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Animated, Share, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Animated, Share, Alert, Platform, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -7,8 +7,11 @@ import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { scheduleMatches, parseCourts } from '../../utils/courtScheduler';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTournaments } from '../../contexts/TournamentContext';
+import { useToast } from '../../contexts/ToastContext';
+import { createNotification, createNotificationsForUsers } from '../../services/notificationService';
 import Button from '../../components/ui/Button';
 import TabSelector from '../../components/ui/TabSelector';
+import FilterChips from '../../components/ui/FilterChips';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import DetailsListItem from '../../components/ui/DetailsListItem';
@@ -16,6 +19,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import TeamsList from '../../components/tournament/TeamsList';
 import Player from '../../components/ui/Player';
 import MatchCard from '../../components/match/MatchCard';
+import RecordScoreModal from '../../components/match/RecordScoreModal';
 import CreateTeamBottomSheet from '../../components/tournament/CreateTeamBottomSheet';
 import JoinTeamBottomSheet from '../../components/tournament/JoinTeamBottomSheet';
 import TournamentOptionsBottomSheet from '../../components/tournament/TournamentOptionsBottomSheet';
@@ -34,11 +38,14 @@ import CompeteIcon from '../../../assets/icons/compete.svg';
 import TeamIcon from '../../../assets/icons/team.svg';
 import RulesIcon from '../../../assets/icons/rules.svg';
 import ChevronDownIcon from '../../../assets/icons/chevrondown.svg';
+import InfoIcon from '../../../assets/icons/infoicon.svg';
+import CloseIcon from '../../../assets/icons/close.svg';
 
 export default function TournamentDetailsScreen({ navigation, route }) {
   const { tournament: propTournament, onAuthRequired, openStartSheet } = route?.params || {};
   const { isAuthenticated, userData } = useAuth();
   const { deleteTournament, getTournamentById, updateTournament } = useTournaments();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [rulesExpanded, setRulesExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('Details');
@@ -52,6 +59,9 @@ export default function TournamentDetailsScreen({ navigation, route }) {
   const [userHasTeam, setUserHasTeam] = useState(false);
   const [expandedRounds, setExpandedRounds] = useState({ 1: true }); // Round 1 expanded by default
   const [selectedGroupPerRound, setSelectedGroupPerRound] = useState({}); // Track selected group per round
+  const [showRecordScoreModal, setShowRecordScoreModal] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [showFormatInfoSheet, setShowFormatInfoSheet] = useState(false);
   const animatedHeight = useRef(new Animated.Value(0)).current;
 
   // Animated values for each round
@@ -168,13 +178,19 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
     // If tournament has joinAsPlayer flag and user data exists, add user to first team
     if (tournament.joinAsPlayer && userData) {
+      const player1Data = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        userId: userData.uid, // Add userId to track team ownership
+      };
+
+      // Only add avatarSource if it exists (avoid null/undefined in Firestore)
+      if (userData.avatarUri) {
+        player1Data.avatarSource = { uri: userData.avatarUri };
+      }
+
       teams.push({
-        player1: {
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          avatarSource: userData.avatarUri || null,
-          userId: userData.uid, // Add userId to track team ownership
-        },
+        player1: player1Data,
         player2: null,
         isAdminTeam: isAdmin, // Mark if this is admin's team
       });
@@ -304,7 +320,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
   const handleConfirmCreateTeam = async () => {
     if (!tournament?.id || !userData) {
-      Alert.alert('Error', 'Cannot create team. Missing tournament or user data.');
+      showToast('Cannot create team. Missing tournament or user data.', 'error');
       return;
     }
 
@@ -313,13 +329,19 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       const currentTeams = tournament.teams || [];
 
       // Create new team with current user as player1
+      const player1Data = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        userId: userData.uid,
+      };
+
+      // Only add avatarSource if it exists (avoid null/undefined in Firestore)
+      if (userData.avatarUri) {
+        player1Data.avatarSource = { uri: userData.avatarUri };
+      }
+
       const newTeam = {
-        player1: {
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          avatarSource: userData.avatarUri ? { uri: userData.avatarUri } : null,
-          userId: userData.uid,
-        },
+        player1: player1Data,
         player2: null,
         isAdminTeam: isAdmin,
       };
@@ -337,13 +359,13 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       setShowCreateTeamSheet(false);
     } catch (error) {
       console.error('Error creating team:', error);
-      Alert.alert('Error', 'Failed to create team. Please try again.');
+      showToast('Failed to create team. Please try again.', 'error');
     }
   };
 
   const handleConfirmJoinTeam = async () => {
     if (!tournament?.id || !userData || !selectedTeam) {
-      Alert.alert('Error', 'Cannot join team. Missing required data.');
+      showToast('Cannot join team. Missing required data.', 'error');
       return;
     }
 
@@ -357,20 +379,26 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       );
 
       if (teamIndex === -1) {
-        Alert.alert('Error', 'Team not found.');
+        showToast('Team not found.', 'error');
         return;
       }
 
       // Update the team with current user as player2
       const updatedTeams = [...currentTeams];
+      const player2Data = {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        userId: userData.uid,
+      };
+
+      // Only add avatarSource if it exists (avoid null/undefined in Firestore)
+      if (userData.avatarUri) {
+        player2Data.avatarSource = { uri: userData.avatarUri };
+      }
+
       updatedTeams[teamIndex] = {
         ...updatedTeams[teamIndex],
-        player2: {
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          avatarSource: userData.avatarUri ? { uri: userData.avatarUri } : null,
-          userId: userData.uid,
-        },
+        player2: player2Data,
       };
 
       // Update tournament in Firebase
@@ -378,13 +406,33 @@ export default function TournamentDetailsScreen({ navigation, route }) {
         teams: updatedTeams,
       });
 
+      // Send notification
+      // Notification: Teammate Joined (to player1) - kept per requirements
+      await createNotification(selectedTeam.player1.userId, {
+        type: 'team',
+        action: 'teammate_joined',
+        title: 'Teammate Joined',
+        message: `${userData.firstName} ${userData.lastName} joined your team in tournament: ${tournament.name}`,
+        metadata: {
+          tournamentId: tournament.id,
+          tournamentName: tournament.name,
+        },
+        playerInfo: {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          avatarUri: userData.avatarUri,
+        },
+      });
+
+      // Notification "you_joined_team" removed per requirements
+
       console.log('Joined team successfully!');
       setUserHasTeam(true);
       setShowJoinTeamSheet(false);
       setSelectedTeam(null);
     } catch (error) {
       console.error('Error joining team:', error);
-      Alert.alert('Error', 'Failed to join team. Please try again.');
+      showToast('Failed to join team. Please try again.', 'error');
     }
   };
 
@@ -392,7 +440,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
     console.log('🔧 Edit tournament clicked', { tournamentId: tournament?.id, activeTab });
 
     if (!tournament?.id) {
-      Alert.alert('Error', 'Cannot edit this tournament. Tournament ID is missing.');
+      showToast('Cannot edit this tournament. Tournament ID is missing.', 'error');
       return;
     }
 
@@ -447,7 +495,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
       setGeneratedGroups(groups);
     } catch (error) {
-      Alert.alert('Error', 'Failed to generate groups. Please try again.');
+      showToast('Failed to generate groups. Please try again.', 'error');
       throw error; // Re-throw so modal can handle the error state
     }
   };
@@ -597,11 +645,11 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
       console.log('Closing modal...');
       setShowStartTournamentSheet(false);
-      console.log('Showing alert...');
-      Alert.alert('Success', `Tournament started! ${matches.length} group stage matches have been created.`);
+      console.log('Showing toast...');
+      showToast(`Tournament started! ${matches.length} group stage matches have been created.`, 'success');
     } catch (error) {
       console.error('Error starting tournament:', error);
-      Alert.alert('Error', `Failed to start tournament: ${error.message}`);
+      showToast(`Failed to start tournament: ${error.message}`, 'error');
     }
   };
 
@@ -615,7 +663,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       const newGroups = generateGroups(teams);
       setGeneratedGroups(newGroups);
     } catch (error) {
-      Alert.alert('Error', 'Failed to regenerate groups. Please try again.');
+      showToast('Failed to regenerate groups. Please try again.', 'error');
       throw error; // Re-throw so modal can handle the error state
     }
   };
@@ -627,6 +675,18 @@ export default function TournamentDetailsScreen({ navigation, route }) {
     const team1HasUser = match.team1?.player1?.userId === userData.uid || match.team1?.player2?.userId === userData.uid;
     const team2HasUser = match.team2?.player1?.userId === userData.uid || match.team2?.player2?.userId === userData.uid;
     return team1HasUser || team2HasUser;
+  };
+
+  // Check if current user can record/edit score for a match
+  const canRecordScore = (match) => {
+    // Tournament host can record any match score
+    if (isAdmin) return true;
+
+    // Players can only record their own match scores
+    if (isUserMatch(match)) return true;
+
+    // Everyone else cannot record scores
+    return false;
   };
 
   // Get user's group ID
@@ -694,7 +754,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
   // TESTING ONLY: Fill tournament with dummy teams
   const handleFillWithDummyData = async () => {
     if (!tournament?.id) {
-      Alert.alert('Error', 'Cannot fill tournament. Tournament ID is missing.');
+      showToast('Cannot fill tournament. Tournament ID is missing.', 'error');
       return;
     }
 
@@ -731,7 +791,6 @@ export default function TournamentDetailsScreen({ navigation, route }) {
             player2: {
               firstName: dummyPlayers[playerIndex % dummyPlayers.length].firstName,
               lastName: dummyPlayers[playerIndex % dummyPlayers.length].lastName,
-              avatarSource: null,
               userId: `dummy-${playerIndex}`,
             },
           };
@@ -744,7 +803,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       const neededTeams = teamCount - updatedCurrentTeams.length;
 
       if (neededTeams <= 0 && updatedCurrentTeams.every(t => t.player1 && t.player2)) {
-        Alert.alert('Info', 'Tournament is already full!');
+        showToast('Tournament is already full!', 'error');
         return;
       }
 
@@ -755,13 +814,11 @@ export default function TournamentDetailsScreen({ navigation, route }) {
           player1: {
             firstName: dummyPlayers[playerIndex % dummyPlayers.length].firstName,
             lastName: dummyPlayers[playerIndex % dummyPlayers.length].lastName,
-            avatarSource: null,
             userId: `dummy-${playerIndex}`,
           },
           player2: {
             firstName: dummyPlayers[(playerIndex + 1) % dummyPlayers.length].firstName,
             lastName: dummyPlayers[(playerIndex + 1) % dummyPlayers.length].lastName,
-            avatarSource: null,
             userId: `dummy-${playerIndex + 1}`,
           },
           isAdminTeam: false,
@@ -773,10 +830,110 @@ export default function TournamentDetailsScreen({ navigation, route }) {
         teams: [...updatedCurrentTeams, ...newTeams],
       });
 
-      Alert.alert('Success', 'Tournament filled with dummy teams!');
+      showToast('Tournament filled with dummy teams!', 'success');
     } catch (error) {
       console.error('Error filling tournament:', error);
-      Alert.alert('Error', 'Failed to fill tournament with dummy data.');
+      showToast('Failed to fill tournament with dummy data.', 'error');
+    }
+  };
+
+  const isMatchPast = (match) => {
+    if (!match.dateTime) return false;
+    const matchDate = new Date(match.dateTime);
+    const now = new Date();
+    return matchDate < now;
+  };
+
+  const handleAddScore = (match) => {
+    // Check permissions before allowing score recording
+    if (!canRecordScore(match)) {
+      showToast('You do not have permission to record this score', 'error');
+      return;
+    }
+
+    setSelectedMatch(match);
+    setShowRecordScoreModal(true);
+  };
+
+  const handleSaveScore = async (scores) => {
+    if (!selectedMatch || !tournament?.id) return;
+
+    try {
+      // Calculate winning team by counting sets won
+      let teamAWins = 0;
+      let teamBWins = 0;
+
+      scores.forEach(set => {
+        const scoreA = parseInt(set.teamA);
+        const scoreB = parseInt(set.teamB);
+        if (scoreA > scoreB) {
+          teamAWins++;
+        } else if (scoreB > scoreA) {
+          teamBWins++;
+        }
+      });
+
+      const winningTeam = teamAWins > teamBWins ? 'left' : 'right';
+
+      // Update the match in the tournament's matches array
+      // Filter out undefined values to avoid Firestore errors
+      const updatedMatches = tournament.matches.map(m => {
+        if (m.id === selectedMatch.id) {
+          const updatedMatch = { ...m, score: scores, scoreRecorded: true, winningTeam };
+          // Remove any undefined fields
+          Object.keys(updatedMatch).forEach(key => {
+            if (updatedMatch[key] === undefined) {
+              delete updatedMatch[key];
+            }
+          });
+          return updatedMatch;
+        }
+        return m;
+      });
+
+      await updateTournament(tournament.id, {
+        matches: updatedMatches,
+      });
+
+      // Determine if this is adding or updating a score
+      const isUpdating = selectedMatch.scoreRecorded === true;
+      const action = isUpdating ? 'score_updated' : 'score_added';
+      const actionText = isUpdating ? 'updated' : 'added';
+
+      // Get all 4 players in the match
+      const playerIds = [
+        selectedMatch.team1?.player1?.userId,
+        selectedMatch.team1?.player2?.userId,
+        selectedMatch.team2?.player1?.userId,
+        selectedMatch.team2?.player2?.userId,
+      ].filter(id => id && id !== userData?.uid); // Exclude the current user
+
+      // Send notifications to all players in the match (except the one who recorded the score)
+      if (playerIds.length > 0 && userData) {
+        await createNotificationsForUsers(playerIds, {
+          type: 'match',
+          action,
+          title: isUpdating ? 'Score Updated' : 'Score Added',
+          message: `${userData.firstName} ${userData.lastName} ${actionText} score to your recent match.`,
+          metadata: {
+            tournamentId: tournament.id,
+            tournamentName: tournament.name,
+            matchId: selectedMatch.id,
+          },
+          playerInfo: {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            avatarUri: userData.avatarUri,
+          },
+        });
+      }
+
+      showToast('Score recorded successfully!', 'success');
+      setShowRecordScoreModal(false);
+      setSelectedMatch(null);
+    } catch (error) {
+      console.error('Error saving score:', error);
+      showToast('Failed to save score. Please try again.', 'error');
     }
   };
 
@@ -859,7 +1016,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
             tabs={['Details', 'Matches']}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            style={{ marginBottom: Spacing.space4 }}
+            variant="underline"
           />
         )}
 
@@ -876,7 +1033,18 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
                 <DetailsListItem
                   icon={<BallIcon width={24} height={24} />}
-                  text={tournament.courts}
+                  text={
+                    tournament.courts
+                      ? (() => {
+                          const courts = parseCourts(tournament.courts);
+                          const courtNumbers = courts.map(court => court.replace(/Court\s*/i, ''));
+                          const formattedCourts = courtNumbers.length > 1
+                            ? courtNumbers.slice(0, -1).join(', ') + ' & ' + courtNumbers[courtNumbers.length - 1]
+                            : courtNumbers[0];
+                          return `Courts: ${formattedCourts}`;
+                        })()
+                      : 'Courts not specified'
+                  }
                 />
 
                 <DetailsListItem
@@ -887,6 +1055,8 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                 <DetailsListItem
                   icon={<CompeteIcon width={24} height={24} />}
                   text={tournament.format}
+                  actionIcon={<InfoIcon width={20} height={20} />}
+                  onActionPress={() => setShowFormatInfoSheet(true)}
                 />
 
                 <DetailsListItem
@@ -1016,27 +1186,16 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                   },
                 ]}
               >
-                  {/* Group Tabs */}
+                  {/* Group Filter Chips */}
                   {tournament.groups && tournament.groups.length > 1 && (
-                    <View style={styles.groupTabsContainer}>
-                      {tournament.groups.map(group => (
-                        <TouchableOpacity
-                          key={group.id}
-                          style={[
-                            styles.groupTab,
-                            getSelectedGroup(1) === group.id && styles.groupTabActive
-                          ]}
-                          onPress={() => setSelectedGroup(1, group.id)}
-                        >
-                          <Text style={[
-                            styles.groupTabText,
-                            getSelectedGroup(1) === group.id && styles.groupTabTextActive
-                          ]}>
-                            {group.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    <FilterChips
+                      chips={tournament.groups.map(g => g.name)}
+                      activeChip={tournament.groups.find(g => g.id === getSelectedGroup(1))?.name || tournament.groups[0].name}
+                      onChipPress={(groupName) => {
+                        const group = tournament.groups.find(g => g.name === groupName);
+                        if (group) setSelectedGroup(1, group.id);
+                      }}
+                    />
                   )}
 
                   {/* Match Cards for Round 1 */}
@@ -1071,6 +1230,10 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                           dateTime={match.dateTime}
                           status={match.status}
                           score={match.score}
+                          scoreRecorded={match.scoreRecorded || false}
+                          isPast={isMatchPast(match)}
+                          onAddScore={() => handleAddScore(match)}
+                          canRecord={canRecordScore(match)}
                           highlightBorder={isUserMatch(match)}
                           onPress={() => {
                             // Transform match data to match MatchDetailsScreen expectations
@@ -1084,6 +1247,8 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                                 player1: match.team2.player1,
                                 player2: match.team2.player2,
                               },
+                              isPast: isMatchPast(match),
+                              tournamentId: tournament?.id,
                             };
                             navigation.navigate('MatchDetails', { match: transformedMatch });
                           }}
@@ -1126,27 +1291,16 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                   },
                 ]}
               >
-                  {/* Group Tabs */}
+                  {/* Group Filter Chips */}
                   {tournament.groups && tournament.groups.length > 1 && (
-                    <View style={styles.groupTabsContainer}>
-                      {tournament.groups.map(group => (
-                        <TouchableOpacity
-                          key={group.id}
-                          style={[
-                            styles.groupTab,
-                            getSelectedGroup(2) === group.id && styles.groupTabActive
-                          ]}
-                          onPress={() => setSelectedGroup(2, group.id)}
-                        >
-                          <Text style={[
-                            styles.groupTabText,
-                            getSelectedGroup(2) === group.id && styles.groupTabTextActive
-                          ]}>
-                            {group.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    <FilterChips
+                      chips={tournament.groups.map(g => g.name)}
+                      activeChip={tournament.groups.find(g => g.id === getSelectedGroup(2))?.name || tournament.groups[0].name}
+                      onChipPress={(groupName) => {
+                        const group = tournament.groups.find(g => g.name === groupName);
+                        if (group) setSelectedGroup(2, group.id);
+                      }}
+                    />
                   )}
 
                   {/* Match Cards for Round 2 */}
@@ -1170,6 +1324,10 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                           dateTime={match.dateTime}
                           status={match.status}
                           score={match.score}
+                          scoreRecorded={match.scoreRecorded || false}
+                          isPast={isMatchPast(match)}
+                          onAddScore={() => handleAddScore(match)}
+                          canRecord={canRecordScore(match)}
                           highlightBorder={isUserMatch(match)}
                           onPress={() => {
                             // Transform match data to match MatchDetailsScreen expectations
@@ -1183,6 +1341,8 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                                 player1: match.team2.player1,
                                 player2: match.team2.player2,
                               },
+                              isPast: isMatchPast(match),
+                              tournamentId: tournament?.id,
                             };
                             navigation.navigate('MatchDetails', { match: transformedMatch });
                           }}
@@ -1224,27 +1384,16 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                   },
                 ]}
               >
-                  {/* Group Tabs */}
+                  {/* Group Filter Chips */}
                   {tournament.groups && tournament.groups.length > 1 && (
-                    <View style={styles.groupTabsContainer}>
-                      {tournament.groups.map(group => (
-                        <TouchableOpacity
-                          key={group.id}
-                          style={[
-                            styles.groupTab,
-                            getSelectedGroup(3) === group.id && styles.groupTabActive
-                          ]}
-                          onPress={() => setSelectedGroup(3, group.id)}
-                        >
-                          <Text style={[
-                            styles.groupTabText,
-                            getSelectedGroup(3) === group.id && styles.groupTabTextActive
-                          ]}>
-                            {group.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    <FilterChips
+                      chips={tournament.groups.map(g => g.name)}
+                      activeChip={tournament.groups.find(g => g.id === getSelectedGroup(3))?.name || tournament.groups[0].name}
+                      onChipPress={(groupName) => {
+                        const group = tournament.groups.find(g => g.name === groupName);
+                        if (group) setSelectedGroup(3, group.id);
+                      }}
+                    />
                   )}
 
                   {/* Match Cards for Round 3 */}
@@ -1268,6 +1417,10 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                           dateTime={match.dateTime}
                           status={match.status}
                           score={match.score}
+                          scoreRecorded={match.scoreRecorded || false}
+                          isPast={isMatchPast(match)}
+                          onAddScore={() => handleAddScore(match)}
+                          canRecord={canRecordScore(match)}
                           highlightBorder={isUserMatch(match)}
                           onPress={() => {
                             // Transform match data to match MatchDetailsScreen expectations
@@ -1281,6 +1434,8 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                                 player1: match.team2.player1,
                                 player2: match.team2.player2,
                               },
+                              isPast: isMatchPast(match),
+                              tournamentId: tournament?.id,
                             };
                             navigation.navigate('MatchDetails', { match: transformedMatch });
                           }}
@@ -1450,6 +1605,55 @@ export default function TournamentDetailsScreen({ navigation, route }) {
         generatedGroups={generatedGroups}
         tournament={tournament}
       />
+
+      <RecordScoreModal
+        visible={showRecordScoreModal}
+        onClose={() => {
+          setShowRecordScoreModal(false);
+          setSelectedMatch(null);
+        }}
+        match={selectedMatch}
+        onSave={handleSaveScore}
+      />
+
+      {/* Format Info Bottom Sheet */}
+      <Modal
+        visible={showFormatInfoSheet}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowFormatInfoSheet(false)}
+      >
+        <SafeAreaView style={styles.formatInfoContainer} edges={['top']}>
+          {/* Swipe Indicator */}
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
+
+          {/* Header with Close Button */}
+          <View style={styles.formatInfoHeader}>
+            <TouchableOpacity onPress={() => setShowFormatInfoSheet(false)} style={styles.headerButton}>
+              <CloseIcon width={32} height={32} />
+            </TouchableOpacity>
+            <View style={styles.formatInfoHeaderTextContainer}>
+              <Text style={styles.formatInfoTitle}>{tournament?.format || 'Format'}</Text>
+            </View>
+            <View style={styles.headerButton} />
+          </View>
+
+          {/* Content */}
+          <ScrollView
+            style={styles.formatInfoScrollView}
+            contentContainerStyle={[styles.formatInfoScrollContent, { paddingBottom: insets.bottom + Spacing.space4 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.formatInfoDescription}>
+              {tournament?.format === 'World cup'
+                ? 'The World Cup format divides all participating teams into groups of 4. Within each group, teams compete in a round-robin tournament where every team plays against each other exactly once, resulting in 3 matches per team in the group stage.\n\nAt the end of the group stage, teams are ranked based on their performance. The top 2 teams from each group advance to the knockout stage, while the remaining teams are eliminated.\n\nThe knockout stage follows a single-elimination bracket format. Winners from each match advance to the next round, while losers are eliminated. The tournament culminates in a final match between the two remaining teams to determine the champion.'
+                : tournament?.formatDescription || 'No format description available.'}
+            </Text>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1505,10 +1709,9 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   badgeMargin: {
-    marginBottom: Spacing.space3,
+    marginBottom: Spacing.space4, // 16px spacing to tabs
   },
   infoCard: {
-    marginTop: Spacing.space4,
     marginBottom: Spacing.space1,
     padding: Spacing.space3,
   },
@@ -1590,21 +1793,19 @@ const styles = StyleSheet.create({
   },
   matchesContainer: {
     flex: 1,
-    marginTop: Spacing.space4,
   },
   roundSection: {
-    marginBottom: Spacing.space2,
+    marginBottom: Spacing.space2, // 8px gap between accordions
   },
   roundDivider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginVertical: Spacing.space3,
   },
   roundHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.space3,
+    paddingTop: Spacing.space2, // 8px top padding only
   },
   roundTitle: {
     fontFamily: 'GeneralSans-Semibold',
@@ -1655,5 +1856,50 @@ const styles = StyleSheet.create({
     color: Colors.neutral400,
     textAlign: 'center',
     paddingVertical: Spacing.space4,
+  },
+  // Format Info Bottom Sheet Styles
+  formatInfoContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: Spacing.space2,
+    paddingBottom: 0,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.neutral300,
+    borderRadius: 2,
+  },
+  formatInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.space2,
+    marginBottom: Spacing.space4,
+  },
+  formatInfoHeaderTextContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  formatInfoTitle: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.headline100,
+    color: Colors.primary300,
+    textAlign: 'center',
+  },
+  formatInfoScrollView: {
+    flex: 1,
+  },
+  formatInfoScrollContent: {
+    paddingHorizontal: Spacing.space4,
+  },
+  formatInfoDescription: {
+    fontFamily: 'GeneralSans-Medium',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+    lineHeight: Typography.body200 * 1.5,
   },
 });

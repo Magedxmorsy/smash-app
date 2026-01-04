@@ -15,8 +15,10 @@ import UpdatesSelectedIcon from '../../../assets/icons/updates-selected.svg';
 import ProfileIcon from '../../../assets/icons/user.svg';
 import ProfileSelectedIcon from '../../../assets/icons/user-selected.svg';
 import * as Haptics from 'expo-haptics';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 export default function BottomTabBar({ state, descriptors, navigation }) {
+  const { unreadCount } = useNotifications();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const tabs = [
@@ -121,7 +123,16 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
               onPress={onPress}
               activeOpacity={0.7}
             >
-              <Icon width={32} height={32} />
+              <View style={styles.iconContainer}>
+                <Icon width={32} height={32} />
+                {tab.id === 'UpdatesTab' && unreadCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.label}>
                 {tab.label}
               </Text>
@@ -157,6 +168,28 @@ const styles = StyleSheet.create({
     minWidth: 65,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconContainer: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: Colors.accent300,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: Colors.background,
+  },
+  badgeText: {
+    color: Colors.primary300,
+    fontSize: 11,
+    fontFamily: 'GeneralSans-Semibold',
   },
   label: {
     fontFamily: 'GeneralSans-Medium',

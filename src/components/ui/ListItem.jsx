@@ -19,57 +19,78 @@ export default function ListItem({
   useChevronRight = false, // New prop to control which icon to show
   rightComponent, // Custom component to show on the right (like a Switch)
   subtitle, // Optional subtitle text
+  error, // Error message to display
+  disabled = false, // Disabled state
+  customInput, // Custom input component (like LocationAutocomplete)
 }) {
   if (editable) {
     return (
-      <View style={styles.container}>
-        <View style={styles.iconContainer}>
-          {icon}
+      <View>
+        <View style={styles.container}>
+          {icon && (
+            <View style={styles.iconContainer}>
+              {icon}
+            </View>
+          )}
+          {customInput || (
+            <TextInput
+              style={styles.input}
+              placeholder={placeholder || label}
+              placeholderTextColor={Colors.neutral400}
+              value={value}
+              onChangeText={onChangeText}
+              keyboardType={keyboardType}
+              textAlignVertical="center"
+            />
+          )}
+          {rightComponent}
         </View>
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder || label}
-          placeholderTextColor={Colors.neutral400}
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType={keyboardType}
-          textAlignVertical="center"
-        />
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
       </View>
     );
   }
 
-  const Container = onPress ? TouchableOpacity : View;
+  const Container = (onPress && !disabled) ? TouchableOpacity : View;
 
   return (
-    <Container
-      style={styles.container}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {icon && (
-        <View style={styles.iconContainer}>
-          {icon}
-        </View>
-      )}
-      <View style={styles.content}>
-        <Text style={value ? styles.label : styles.placeholder}>
-          {value || placeholder || label}
-        </Text>
-        {subtitle && (
-          <Text style={styles.subtitle}>{subtitle}</Text>
+    <View>
+      <Container
+        style={styles.container}
+        onPress={disabled ? undefined : onPress}
+        activeOpacity={0.7}
+      >
+        {icon && (
+          <View style={[styles.iconContainer, disabled && styles.iconDisabled]}>
+            {icon}
+          </View>
         )}
-      </View>
-      {rightComponent || (showChevron && (
-        <View style={styles.chevronContainer}>
-          {useChevronRight ? (
-            <ChevronRightIcon width={24} height={24} />
-          ) : (
-            <SelectorIcon width={24} height={24} />
+        <View style={styles.content}>
+          <Text style={[
+            value ? styles.label : styles.placeholder,
+            disabled && styles.labelDisabled
+          ]}>
+            {value || placeholder || label}
+          </Text>
+          {subtitle && !error && (
+            <Text style={styles.subtitle}>{subtitle}</Text>
           )}
         </View>
-      ))}
-    </Container>
+        {rightComponent || (showChevron && (
+          <View style={[styles.chevronContainer, disabled && styles.iconDisabled]}>
+            {useChevronRight ? (
+              <ChevronRightIcon width={24} height={24} />
+            ) : (
+              <SelectorIcon width={24} height={24} />
+            )}
+          </View>
+        ))}
+      </Container>
+      {error && (
+        <Text style={styles.errorText}>{error}</Text>
+      )}
+    </View>
   );
 }
 
@@ -128,5 +149,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.space2,
+  },
+  errorText: {
+    fontFamily: 'GeneralSans-Medium',
+    fontSize: Typography.body300,
+    color: Colors.error,
+    marginTop: 0, // Decreased by 4px (was Spacing.space1)
+    marginBottom: Spacing.space2, // Added 8px (4px original + 4px increase)
+    marginLeft: Spacing.space4 + Spacing.iconSize + Spacing.space3, // Align with input text
+  },
+  labelDisabled: {
+    color: Colors.neutral300,
+  },
+  iconDisabled: {
+    opacity: 0.5,
   },
 });

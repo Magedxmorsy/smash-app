@@ -58,7 +58,7 @@ export function scheduleMatches(
     const scheduledMatch = {
       ...match,
       court: assignedCourt,
-      dateTime: matchStartTime,
+      dateTime: matchStartTime.toISOString(), // Convert to ISO string for Firestore
       timeSlot: currentTimeSlot + 1,
       duration: matchDuration,
     };

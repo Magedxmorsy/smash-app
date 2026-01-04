@@ -6,52 +6,41 @@ import { useAuth } from '../../contexts/AuthContext';
 import EmptyState from '../../components/ui/EmptyState';
 import Button from '../../components/ui/Button';
 import MobileHeader from '../../components/ui/MobileHeader';
-import CreateTournamentModal from '../../components/tournament/CreateTournamentModal';
 import TournamentCard from '../../components/tournament/TournamentCard';
 import Avatar from '../../components/ui/Avatar';
 import { Spacing } from '../../constants/Spacing';
 import { Typography } from '../../constants/Typography';
 
-export default function CompeteScreen({ navigation, onCreateTournament }) {
+export default function CompeteScreen({ navigation }) {
   const { tournaments: allTournaments, getOngoingTournaments, getCompletedTournaments } = useTournaments();
   const { userData } = useAuth();
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const handleCreateClick = () => {
-    if (onCreateTournament) {
-      // Pass the action to execute after auth (opening the modal)
-      onCreateTournament(() => setModalVisible(true));
-    } else {
-      setModalVisible(true);
-    }
-  };
 
   const ongoingTournaments = getOngoingTournaments();
   const completedTournaments = getCompletedTournaments();
   const tournaments = [...ongoingTournaments, ...completedTournaments];
 
   const handleCreateTournament = () => {
-    handleCreateClick();
-  };
-
-  const handleCloseModal = () => {
-    setModalVisible(false);
+    navigation.navigate('CreateTournamentModal', {
+      editMode: false,
+      onSave: handleTournamentCreated,
+    });
   };
 
   const handleTournamentPress = (tournament, openStartSheet = false) => {
     navigation.navigate('TournamentDetails', {
       tournament,
-      onAuthRequired: onCreateTournament,
       openStartSheet,
     });
   };
 
   const handleTournamentCreated = (tournament) => {
-    // Navigate to the newly created tournament
-    navigation.navigate('TournamentDetails', {
-      tournament,
-      onAuthRequired: onCreateTournament,
-    });
+    // Navigate to the newly created tournament using its ID
+    // The TournamentDetailsScreen will fetch the fresh data from Firestore
+    if (tournament?.id) {
+      navigation.navigate('TournamentDetails', {
+        tournamentId: tournament.id,
+      });
+    }
   };
 
   return (
@@ -69,12 +58,26 @@ export default function CompeteScreen({ navigation, onCreateTournament }) {
             headline="No tournaments yet"
             body="Create your first tournament or join one from friends"
             button={
-              <Button
-                title="Create tournament"
-                onPress={handleCreateTournament}
-                variant="primary"
-                fullWidth={false}
-              />
+              <View style={styles.buttonGroup}>
+                <Button
+                  title="Create tournament"
+                  onPress={handleCreateTournament}
+                  variant="primary"
+                  fullWidth={false}
+                />
+                <Button
+                  title="Test V2 Modal"
+                  onPress={() => setShowV2Modal(true)}
+                  variant="secondary"
+                  fullWidth={false}
+                />
+                <Button
+                  title="Test V3 Modal"
+                  onPress={() => setShowV3Modal(true)}
+                  variant="secondary"
+                  fullWidth={false}
+                />
+              </View>
             }
           />
         </View>
@@ -148,12 +151,6 @@ export default function CompeteScreen({ navigation, onCreateTournament }) {
           })}
         </ScrollView>
       )}
-
-      <CreateTournamentModal
-        visible={modalVisible}
-        onClose={handleCloseModal}
-        onTournamentCreated={handleTournamentCreated}
-      />
     </View>
   );
 }
@@ -177,5 +174,9 @@ const styles = StyleSheet.create({
     fontSize: Typography.body200,
     color: Colors.primary300,
     marginBottom: Spacing.space2,
+  },
+  buttonGroup: {
+    gap: Spacing.space2,
+    alignItems: 'center',
   },
 });

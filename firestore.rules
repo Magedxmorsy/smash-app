@@ -6,7 +6,10 @@ service cloud.firestore {
     // Users collection - users can read/write their own document
     match /users/{userId} {
       // Users can read their own data
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow get: if request.auth != null && request.auth.uid == userId;
+
+      // Allow anyone to query users by email (for login/signup email checks)
+      allow list: if true;
 
       // Users can update their own data
       allow update: if request.auth != null && request.auth.uid == userId;
@@ -16,6 +19,36 @@ service cloud.firestore {
 
       // Users can delete their own account
       allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Notifications subcollection - users can manage their own notifications
+      match /notifications/{notificationId} {
+        // Users can only read their own notifications
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // Any authenticated user can create notifications (for sending to others)
+        allow create: if request.auth != null;
+
+        // Users can update their own notifications (mark as read)
+        allow update: if request.auth != null && request.auth.uid == userId;
+
+        // Users can delete their own notifications
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Settings subcollection - users can manage their own settings
+      match /settings/{settingId} {
+        // Any authenticated user can read settings (needed for notification service to check preferences)
+        allow read: if request.auth != null;
+
+        // Users can create their own settings
+        allow create: if request.auth != null && request.auth.uid == userId;
+
+        // Users can update their own settings
+        allow update: if request.auth != null && request.auth.uid == userId;
+
+        // Users can delete their own settings
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // Tournaments collection
@@ -26,9 +59,24 @@ service cloud.firestore {
       // Any authenticated user can create tournaments
       allow create: if request.auth != null;
 
-      // Only the creator can update/delete their tournaments
-      allow update, delete: if request.auth != null &&
-                              resource.data.createdBy == request.auth.uid;
+      // Update permissions based on what's being changed
+      allow update: if request.auth != null && (
+        // If ONLY updating matches (score recording), must be host OR participant
+        // Fine-grained player validation (match-specific) is enforced in app code via canRecordScore()
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['matches']) &&
+         (resource.data.hostId == request.auth.uid ||
+          request.auth.uid in resource.data.get('participantIds', [])))
+        ||
+        // For all other updates (teams, status, participantIds, etc.), any authenticated user
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['matches']))
+        ||
+        // Host can always update anything
+        resource.data.hostId == request.auth.uid
+      );
+
+      // Only the host can delete tournaments
+      allow delete: if request.auth != null &&
+                      resource.data.hostId == request.auth.uid;
     }
 
     // Default: deny all other access for security

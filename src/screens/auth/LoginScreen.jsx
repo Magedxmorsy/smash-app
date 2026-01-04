@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
@@ -15,6 +15,8 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const emailInputRef = useRef(null);
   const { signIn } = useAuth();
 
@@ -27,15 +29,18 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
   }, []);
 
   const handleContinue = async () => {
+    // Clear previous errors
+    setEmailError('');
+
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+      setEmailError('Please enter your email');
       return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      setEmailError('Please enter a valid email address');
       return;
     }
 
@@ -49,7 +54,7 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
     setIsLoading(false);
 
     if (error) {
-      Alert.alert('Error', error);
+      setEmailError(error);
       return;
     }
 
@@ -67,8 +72,11 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
   };
 
   const handleLogin = async () => {
+    // Clear previous errors
+    setPasswordError('');
+
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      setPasswordError('Please enter your password');
       return;
     }
 
@@ -77,7 +85,12 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
     setIsLoading(false);
 
     if (!success) {
-      Alert.alert('Login Failed', error || 'An error occurred');
+      // Display user-friendly error message
+      if (error.includes('invalid-credential') || error.includes('Invalid email or password')) {
+        setPasswordError('Invalid email or password');
+      } else {
+        setPasswordError(error || 'An error occurred');
+      }
     } else {
       // Close modal on successful login
       if (onClose) {
@@ -124,12 +137,16 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
               label="Email"
               placeholder="e.g. name@proton.me"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError(''); // Clear error when user types
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               variant="light"
               editable={!showPasswordField}
+              error={emailError}
             />
 
 {showPasswordField && (
@@ -144,11 +161,15 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
                   <Input
                     placeholder="Choose password"
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (passwordError) setPasswordError(''); // Clear error when user types
+                    }}
                     secureTextEntry={!showPassword}
                     variant="light"
                     showPasswordToggle={true}
                     onTogglePassword={() => setShowPassword(!showPassword)}
+                    error={passwordError}
                   />
                 </View>
               </>

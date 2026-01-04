@@ -35,14 +35,25 @@ export default function FullScreenModal({
       avoidKeyboard={false}
       animationIn="slideInUp"
       animationOut="slideOutDown"
+      animationInTiming={400}
+      animationOutTiming={300}
+      backdropTransitionInTiming={400}
+      backdropTransitionOutTiming={300}
+      useNativeDriver={true}
+      useNativeDriverForBackdrop={true}
+      hasBackdrop={false}
+      backdropOpacity={0}
+      statusBarTranslucent={true}
     >
-      <View style={[styles.container, { height: screenHeight, paddingTop: insets.top }]}>
-        {/* Swipe Handle */}
-        <View style={styles.handleContainer}>
-          <View style={styles.handle} />
-        </View>
+      <View style={[styles.container, { height: screenHeight, paddingTop: title ? insets.top : 0 }]}>
+        {/* Swipe Handle - only show if title is provided */}
+        {title && (
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
+        )}
 
-        {/* Header */}
+        {/* Header - only show if title is provided */}
         {title && (
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.headerIcon}>
@@ -59,21 +70,27 @@ export default function FullScreenModal({
           </View>
         )}
 
-        {/* Body with KeyboardAwareScrollView */}
-        <KeyboardAwareScrollView
-          ref={scrollViewRef}
-          style={styles.body}
-          contentContainerStyle={styles.bodyContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          enableOnAndroid={true}
-          enableAutomaticScroll={false}
-          extraScrollHeight={0}
-          extraHeight={0}
-          enableResetScrollToCoords={false}
-        >
-          {children}
-        </KeyboardAwareScrollView>
+        {/* Body - use ScrollView only if title is provided, otherwise render children directly (for navigators) */}
+        {title ? (
+          <KeyboardAwareScrollView
+            ref={scrollViewRef}
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            enableOnAndroid={true}
+            enableAutomaticScroll={false}
+            extraScrollHeight={0}
+            extraHeight={0}
+            enableResetScrollToCoords={false}
+          >
+            {children}
+          </KeyboardAwareScrollView>
+        ) : (
+          <View style={styles.body}>
+            {children}
+          </View>
+        )}
 
         {/* Footer */}
         {footer && (

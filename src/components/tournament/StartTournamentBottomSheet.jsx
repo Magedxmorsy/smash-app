@@ -8,6 +8,7 @@ import { parseCourts } from '../../utils/courtScheduler';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Player from '../ui/Player';
+import Banner from '../ui/Banner';
 import CloseIcon from '../../../assets/icons/close.svg';
 
 export default function StartTournamentBottomSheet({
@@ -29,25 +30,35 @@ export default function StartTournamentBottomSheet({
 
     const courts = parseCourts(tournament.courts);
     const courtCount = courts.length;
-    const courtsList = courts.join(', ');
+
+    // Format courts as "6, 5 & 3" instead of "Court 6, Court 5, Court 3"
+    const courtNumbers = courts.map(court => court.replace(/Court\s*/i, ''));
+    const courtsList = courtNumbers.length > 1
+      ? courtNumbers.slice(0, -1).join(', ') + ' & ' + courtNumbers[courtNumbers.length - 1]
+      : courtNumbers[0];
 
     // Default match duration: 30 minutes
     const matchDuration = tournament.matchDuration || 30;
 
     // Calculate total matches (for round-robin in groups of 4)
     const groupCount = Math.ceil(tournament.teamCount / 4);
-    const matchesPerGroup = 6;
+    const matchesPerGroup = 6; // Total matches per group across all rounds
     const totalMatches = groupCount * matchesPerGroup;
 
+    // Calculate matches per round (each group has 2 matches per round with 4 teams)
+    const matchesPerRound = groupCount * 2; // 2 matches per group per round
+    const numberOfRounds = 3; // Always 3 rounds for 4-team groups
+
+    // Check if courts are limited (need multiple time slots per round)
+    const timeSlotsPerRound = Math.ceil(matchesPerRound / courtCount);
+    const isLimited = timeSlotsPerRound > 1;
+
     // Calculate total time
-    const timeSlotsNeeded = Math.ceil(totalMatches / courtCount);
-    const totalMinutes = timeSlotsNeeded * matchDuration;
+    const totalTimeSlots = numberOfRounds * timeSlotsPerRound;
+    const totalMinutes = totalTimeSlots * matchDuration;
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     const totalTimeFormatted = minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`;
-
-    // Check if courts are limited
-    const isLimited = courtCount < totalMatches;
 
     return {
       courtsList,
@@ -56,7 +67,7 @@ export default function StartTournamentBottomSheet({
       totalMatches,
       totalTimeFormatted,
       isLimited,
-      timeSlotsNeeded,
+      timeSlotsNeeded: timeSlotsPerRound,
     };
   };
 
@@ -163,10 +174,12 @@ export default function StartTournamentBottomSheet({
 
             {/* Warning Banner for Limited Courts */}
             {scheduleInfo.isLimited && (
-              <View style={styles.warningBanner}>
-                <Text style={styles.warningText}>
-                  ⚠️ Matches will be played in {scheduleInfo.timeSlotsNeeded} time slots as you have limited courts.
-                </Text>
+              <View style={styles.bannerContainer}>
+                <Banner
+                  variant="warning"
+                  message={`Matches will be played in ${scheduleInfo.timeSlotsNeeded} time slots as you have limited courts.`}
+                  dismissible={false}
+                />
               </View>
             )}
 
@@ -335,19 +348,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.body200,
     color: Colors.primary300,
   },
-  warningBanner: {
-    backgroundColor: Colors.warningLight,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    borderRadius: BorderRadius.radius3,
-    padding: Spacing.space3,
-    marginBottom: Spacing.space3,
-  },
-  warningText: {
-    fontFamily: 'GeneralSans-Medium',
-    fontSize: Typography.body300,
-    color: Colors.primary300,
-    lineHeight: Typography.body300 * 1.5,
+  bannerContainer: {
+    marginBottom: Spacing.space4, // 16px bottom margin
   },
   disclaimer: {
     fontFamily: 'GeneralSans-Medium',

@@ -16,15 +16,15 @@ const Tab = createBottomTabNavigator();
 function getTabBarVisibility(route) {
   const routeName = getFocusedRouteNameFromRoute(route) ?? route.name;
 
-  // Hide tab bar on detail screens and settings
-  if (routeName === 'TournamentDetails' || routeName === 'MatchDetails' || routeName === 'Settings' || routeName === 'AccountSettings' || routeName === 'NotificationsSettings' || routeName === 'TermsOfService' || routeName === 'PrivacyPolicy' || routeName === 'AboutSmash') {
+  // Hide tab bar on detail screens, settings, and modals
+  if (routeName === 'TournamentDetails' || routeName === 'MatchDetails' || routeName === 'Settings' || routeName === 'AccountSettings' || routeName === 'NotificationsSettings' || routeName === 'TermsOfService' || routeName === 'PrivacyPolicy' || routeName === 'AboutSmash' || routeName === 'CreateTournamentModal') {
     return 'none';
   }
 
   return 'flex';
 }
 
-export default function TabNavigator({ onCreateTournament, onCreateAccount }) {
+export default function TabNavigator({ onCreateAccount }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Tab.Navigator
@@ -35,20 +35,18 @@ export default function TabNavigator({ onCreateTournament, onCreateAccount }) {
       >
       <Tab.Screen
         name="HomeTab"
+        component={HomeStack}
         options={({ route }) => ({
           tabBarStyle: { display: getTabBarVisibility(route) }
         })}
-      >
-        {(props) => <HomeStack {...props} onCreateTournament={onCreateTournament} />}
-      </Tab.Screen>
+      />
       <Tab.Screen
         name="CompeteTab"
+        component={CompeteStack}
         options={({ route }) => ({
           tabBarStyle: { display: getTabBarVisibility(route) }
         })}
-      >
-        {(props) => <CompeteStack {...props} onCreateTournament={onCreateTournament} />}
-      </Tab.Screen>
+      />
       <Tab.Screen name="UpdatesTab" component={UpdatesScreen} />
       <Tab.Screen
         name="ProfileTab"

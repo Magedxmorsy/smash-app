@@ -1,10 +1,11 @@
 ---
 name: qc-audit
-description: "Perform comprehensive quality control audits on code including React Native/Expo best practices, TypeScript type safety, Firebase security, bug detection, performance issues, and code quality standards. Use when reviewing code, before commits, or when investigating quality concerns."
+description: "Perform comprehensive quality control audits on code including automated tests, React Native/Expo best practices, TypeScript type safety, Firebase security, bug detection, performance issues, and code quality standards. Use when reviewing code, before commits, or when investigating quality concerns."
 allowed-tools:
   - Read
   - Grep
   - Glob
+  - Bash
 ---
 
 # QC Audit Skill
@@ -158,25 +159,90 @@ Performs comprehensive quality control audits on the SMASH tournament app codeba
 - Edge cases in elimination logic
 - Data consistency in tournament updates
 
+### 10. Automated Testing
+
+**Test Execution:**
+- Run `npm test` to execute all test suites
+- Run `npm run test:coverage` to check test coverage
+- Verify all tests pass before approving code
+- Check that coverage meets minimum thresholds (aim for >80%)
+
+**Test Coverage Requirements:**
+- **Components**: All UI components should have tests for:
+  - Rendering with different props
+  - User interactions (press, input, gestures)
+  - Conditional rendering logic
+  - Edge cases and error states
+- **Business Logic**: All services/utilities should have tests for:
+  - Core functionality and algorithms
+  - Input validation and error handling
+  - Edge cases and boundary conditions
+  - Async operations and promises
+- **User Flows**: Critical paths should have integration tests:
+  - Authentication (login, signup, logout)
+  - Tournament creation and management
+  - Match updates and scoring
+  - Navigation flows
+
+**Test Quality Checks:**
+- Tests are meaningful (not just checking if component renders)
+- Tests cover edge cases and error scenarios
+- Tests are isolated (no dependencies between tests)
+- Mocks are properly configured (Firebase, AsyncStorage, Navigation)
+- Test descriptions are clear and specific
+- No skipped tests (test.skip) without documented reason
+- No console.log statements in tests
+
+**Anti-patterns to flag:**
+- Tests that always pass (testing implementation details)
+- Tests with no assertions
+- Overly complex test setup (test the test!)
+- Testing library internals instead of behavior
+- Brittle tests that break on minor changes
+- Missing cleanup in tests (memory leaks)
+- Hardcoded test data without clear purpose
+
+**Known Issues:**
+- Expo Winter runtime compatibility issue with Expo 54 + Jest
+- LoginScreen tests may fail at teardown (known issue)
+- TabSelector and simple component tests should work fine
+- Check jest-setup.js for all required mocks
+
+**Test Results Interpretation:**
+- PASS: All tests passed - code is verified
+- FAIL: Review failed tests, fix issues before proceeding
+- Coverage < 80%: Write additional tests for uncovered code
+- Snapshot failures: Review if changes are intentional
+
 ## Audit Process
 
 When performing a QC audit:
 
-1. **Identify scope**: Determine which files/components to audit based on context
-2. **Systematic review**: Go through each category systematically
-3. **Document findings**: Create clear, actionable items with:
+1. **Run automated tests**: Execute `npm test` to verify all tests pass
+   - If tests fail, document failures in the report
+   - Check test coverage with `npm run test:coverage`
+   - Flag any missing tests for critical code paths
+2. **Identify scope**: Determine which files/components to audit based on context
+3. **Systematic review**: Go through each category systematically
+4. **Document findings**: Create clear, actionable items with:
    - Severity (Critical, High, Medium, Low)
    - Location (file:line)
    - Issue description
    - Recommended fix
    - Code example if applicable
-4. **Prioritize**: Order by severity and impact
-5. **Provide summary**: Count of issues by category and severity
+5. **Prioritize**: Order by severity and impact
+6. **Provide summary**: Count of issues by category and severity
 
 ## Output Format
 
 ```
 # QC Audit Report
+
+## Automated Test Results
+- Test Status: PASS/FAIL
+- Tests Run: X passed, Y failed, Z total
+- Coverage: X% statements, Y% branches, Z% functions, W% lines
+- Failed Tests: [List any failures with descriptions]
 
 ## Summary
 - Critical: X issues
@@ -197,6 +263,7 @@ When performing a QC audit:
 - General improvements
 - Refactoring suggestions
 - Architecture considerations
+- Test coverage gaps to address
 ```
 
 ## Examples
@@ -248,6 +315,45 @@ const handleItemPress = useCallback((id: string) => {
 }, [handlePress]);
 
 <TouchableOpacity onPress={() => handleItemPress(item.id)}>
+```
+
+### Example 4: Automated Testing
+```typescript
+// BAD - Shallow test that doesn't verify behavior
+it('should render', () => {
+  const { container } = render(<LoginScreen />);
+  expect(container).toBeTruthy();
+});
+
+// GOOD - Test actual user behavior and edge cases
+describe('LoginScreen', () => {
+  it('should show error when email is invalid', async () => {
+    const { getByPlaceholderText, getByText } = render(<LoginScreen />);
+
+    const emailInput = getByPlaceholderText('Enter your email');
+    fireEvent.changeText(emailInput, 'invalid-email');
+    fireEvent.press(getByText('Continue'));
+
+    await waitFor(() => {
+      expect(getByText('Please enter a valid email address')).toBeTruthy();
+    });
+  });
+
+  it('should call Firebase auth when valid credentials provided', async () => {
+    const mockSignIn = jest.fn().mockResolvedValue({ user: { uid: '123' } });
+    useAuth.mockReturnValue({ signIn: mockSignIn });
+
+    const { getByPlaceholderText, getByText } = render(<LoginScreen />);
+
+    fireEvent.changeText(getByPlaceholderText('Enter your email'), 'test@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
+    fireEvent.press(getByText('Login'));
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123');
+    });
+  });
+});
 ```
 
 ## When to Use This Skill
