@@ -42,7 +42,7 @@ import InfoIcon from '../../../assets/icons/infoicon.svg';
 import CloseIcon from '../../../assets/icons/close.svg';
 
 export default function TournamentDetailsScreen({ navigation, route }) {
-  const { tournament: propTournament, onAuthRequired, openStartSheet } = route?.params || {};
+  const { tournament: propTournament, tournamentId, onAuthRequired, openStartSheet } = route?.params || {};
   const { isAuthenticated, userData } = useAuth();
   const { deleteTournament, getTournamentById, updateTournament } = useTournaments();
   const { showToast } = useToast();
@@ -129,8 +129,17 @@ export default function TournamentDetailsScreen({ navigation, route }) {
     setShowCreateTeamSheet(true);
   };
 
-  // Get fresh tournament data from context if it has an ID, otherwise use prop or fallback
-  const freshTournament = propTournament?.id ? getTournamentById(propTournament.id) : null;
+  // Get fresh tournament data from context
+  // Support both tournament object and tournamentId string
+  let freshTournament = null;
+  if (tournamentId) {
+    // If tournamentId is provided, fetch by ID
+    freshTournament = getTournamentById(tournamentId);
+  } else if (propTournament?.id) {
+    // If tournament object with ID is provided, fetch fresh data
+    freshTournament = getTournamentById(propTournament.id);
+  }
+
   const tournament = freshTournament || propTournament || {
     name: 'April friends challenge',
     status: 'REGISTRATION',
