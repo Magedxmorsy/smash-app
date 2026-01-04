@@ -189,8 +189,8 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         onSave(resultTournament);
       }
 
-      // Close modal
-      if (onClose) {
+      // Close modal (only for edit mode - create mode navigation handled by parent)
+      if (editMode && onClose) {
         onClose();
       }
     } catch (error) {
