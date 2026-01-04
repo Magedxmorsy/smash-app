@@ -835,8 +835,11 @@ export default function TournamentDetailsScreen({ navigation, route }) {
         playerIndex += 2;
       }
 
+      const allTeams = [...updatedCurrentTeams, ...newTeams];
+
       await updateTournament(tournament.id, {
-        teams: [...updatedCurrentTeams, ...newTeams],
+        teams: allTeams,
+        registeredTeams: allTeams.length, // Update registered count to match actual teams
       });
 
       showToast('Tournament filled with dummy teams!', 'success');
