@@ -95,10 +95,12 @@ export default function TournamentCard({
       buttonVariant = 'ghost';
     }
   } else {
-    if (userJoined || isAllFull) {
+    if (userJoined || isAllFull || !isRegistration) {
+      // Show View if: user already joined, tournament is full, or tournament already started
       buttonTitle = 'View';
       buttonVariant = 'ghost';
     } else {
+      // Only show Join during REGISTRATION phase when user hasn't joined and slots available
       buttonTitle = 'Join';
       buttonVariant = 'accent';
     }
