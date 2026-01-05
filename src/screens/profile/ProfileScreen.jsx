@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTournaments } from '../../contexts/TournamentContext';
+import { calculatePlayerStats } from '../../utils/statsCalculator';
 import TournamentCard from '../../components/tournament/TournamentCard';
 import MobileHeader from '../../components/ui/MobileHeader';
 import TabSelector from '../../components/ui/TabSelector';
@@ -20,11 +21,24 @@ export default function ProfileScreen({ navigation, onCreateAccount }) {
   const [activeTab, setActiveTab] = useState('Hosted');
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Calculate real player stats from tournaments
+  const playerStats = useMemo(() => {
+    if (!userData?.uid || !allTournaments) {
+      return {
+        tournamentsPlayed: 0,
+        trophiesWon: 0,
+        matchesWon: 0,
+        matchesPlayed: 0,
+      };
+    }
+    return calculatePlayerStats(allTournaments, userData.uid);
+  }, [allTournaments, userData?.uid]);
+
   const stats = [
-    { label: 'Tournaments\nplayed', value: '5' },
-    { label: 'Trophies\nwon', value: '23' },
-    { label: 'Matches\nwon', value: '1' },
-    { label: 'Matches\nplayed', value: '32' },
+    { label: 'Tournaments\nplayed', value: playerStats.tournamentsPlayed.toString() },
+    { label: 'Trophies\nwon', value: playerStats.trophiesWon.toString() },
+    { label: 'Matches\nwon', value: playerStats.matchesWon.toString() },
+    { label: 'Matches\nplayed', value: playerStats.matchesPlayed.toString() },
   ];
 
   const hostedTournaments = getHostedTournaments();
