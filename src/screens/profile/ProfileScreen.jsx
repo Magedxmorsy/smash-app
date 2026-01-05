@@ -35,10 +35,10 @@ export default function ProfileScreen({ navigation, onCreateAccount }) {
   }, [allTournaments, userData?.uid]);
 
   const stats = [
-    { label: 'Tournaments\nplayed', value: playerStats.tournamentsPlayed.toString() },
-    { label: 'Trophies\nwon', value: playerStats.trophiesWon.toString() },
-    { label: 'Matches\nwon', value: playerStats.matchesWon.toString() },
-    { label: 'Matches\nplayed', value: playerStats.matchesPlayed.toString() },
+    { label: 'Tournaments played', value: playerStats.tournamentsPlayed.toString() },
+    { label: 'Trophies won', value: playerStats.trophiesWon.toString() },
+    { label: 'Matches won', value: playerStats.matchesWon.toString() },
+    { label: 'Matches played', value: playerStats.matchesPlayed.toString() },
   ];
 
   const hostedTournaments = getHostedTournaments();
