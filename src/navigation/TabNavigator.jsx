@@ -1,6 +1,5 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -13,33 +12,6 @@ import { Colors } from '../constants/Colors';
 
 const Tab = createBottomTabNavigator();
 
-function getTabBarVisibility(route) {
-  const routeName = getFocusedRouteNameFromRoute(route) ?? route.name;
-
-  console.log('Current route name:', routeName);
-
-  // Hide tab bar on detail screens, settings, and modals
-  const hiddenRoutes = [
-    'TournamentDetails',
-    'MatchDetails',
-    'Settings',
-    'AccountSettings',
-    'ChangePassword',
-    'NotificationsSettings',
-    'TermsOfService',
-    'PrivacyPolicy',
-    'AboutSmash',
-    'Feedback',
-    'CreateTournamentModal'
-  ];
-
-  if (hiddenRoutes.includes(routeName)) {
-    return 'none';
-  }
-
-  return 'flex';
-}
-
 export default function TabNavigator({ onCreateAccount }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -49,30 +21,10 @@ export default function TabNavigator({ onCreateAccount }) {
           headerShown: false,
         }}
       >
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeStack}
-        options={({ route }) => ({
-          tabBarStyle: { display: getTabBarVisibility(route) }
-        })}
-      />
-      <Tab.Screen
-        name="CompeteTab"
-        component={CompeteStack}
-        options={({ route }) => ({
-          tabBarStyle: { display: getTabBarVisibility(route) }
-        })}
-      />
+      <Tab.Screen name="HomeTab" component={HomeStack} />
+      <Tab.Screen name="CompeteTab" component={CompeteStack} />
       <Tab.Screen name="UpdatesTab" component={UpdatesScreen} />
-      <Tab.Screen
-        name="ProfileTab"
-        options={({ route }) => {
-          const display = getTabBarVisibility(route);
-          return {
-            tabBarStyle: { display }
-          };
-        }}
-      >
+      <Tab.Screen name="ProfileTab">
         {(props) => <ProfileStack {...props} onCreateAccount={onCreateAccount} />}
       </Tab.Screen>
     </Tab.Navigator>

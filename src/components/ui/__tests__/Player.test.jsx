@@ -17,8 +17,8 @@ describe('Player', () => {
       <Player firstName="Alice" lastName="Smith" />
     );
 
-    // Avatar should show initial 'A' from "Alice Smith"
-    expect(getByText('A')).toBeTruthy();
+    // Avatar should show initials 'AS' from "Alice Smith"
+    expect(getByText('AS')).toBeTruthy();
     expect(getByText('Alice')).toBeTruthy();
     expect(getByText('Smith')).toBeTruthy();
   });
@@ -59,12 +59,13 @@ describe('Player', () => {
   });
 
   it('should handle single character names', () => {
-    const { getAllByText, getByText } = render(
+    const { getByText } = render(
       <Player firstName="A" lastName="B" />
     );
 
-    // "A" appears twice: once in avatar, once as firstName
-    expect(getAllByText('A').length).toBeGreaterThanOrEqual(1);
+    // Avatar shows 'AB' initials
+    expect(getByText('AB')).toBeTruthy();
+    expect(getByText('A')).toBeTruthy();
     expect(getByText('B')).toBeTruthy();
   });
 });

@@ -48,21 +48,11 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
     },
   ];
 
-  // Check if we're on a detail screen in any stack
+  // Check if we're on a nested screen in any stack
+  // Convention: Hide tab bar for any non-root screen (index > 0)
   const currentRoute = state.routes[state.index];
   const nestedState = currentRoute.state;
-
-  const currentNestedRouteName = nestedState?.routes[nestedState.index]?.name;
-  const isOnDetailScreen = currentNestedRouteName === 'TournamentDetails' ||
-                           currentNestedRouteName === 'MatchDetails' ||
-                           currentNestedRouteName === 'Settings' ||
-                           currentNestedRouteName === 'AccountSettings' ||
-                           currentNestedRouteName === 'ChangePassword' ||
-                           currentNestedRouteName === 'NotificationsSettings' ||
-                           currentNestedRouteName === 'TermsOfService' ||
-                           currentNestedRouteName === 'PrivacyPolicy' ||
-                           currentNestedRouteName === 'AboutSmash' ||
-                           currentNestedRouteName === 'Feedback';
+  const isOnDetailScreen = nestedState && nestedState.index > 0;
 
   // Animate tab bar in/out based on route
   useEffect(() => {
