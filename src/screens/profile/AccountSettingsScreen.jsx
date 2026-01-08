@@ -18,20 +18,19 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const handleEmailInfo = () => {
     Alert.alert(
-      'Change Email',
+      'Change email',
       'To change your email address, please contact Smash support at info@getsmash.net',
       [{ text: 'OK' }]
     );
   };
 
   const handleChangePassword = () => {
-    // TODO: Navigate to change password screen
-    Alert.alert('Change Password', 'This feature is coming soon!');
+    navigation.navigate('ChangePassword');
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
+      'Delete account',
       'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data.',
       [
         {
@@ -43,7 +42,7 @@ export default function AccountSettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: () => {
             // TODO: Implement account deletion
-            Alert.alert('Delete Account', 'This feature is coming soon!');
+            Alert.alert('Delete account', 'This feature is coming soon!');
           },
         },
       ],
@@ -89,7 +88,7 @@ export default function AccountSettingsScreen({ navigation }) {
           />
           <ListItem
             icon={<LockIcon width={24} height={24} />}
-            value="Change Password"
+            value="Change password"
             onPress={handleChangePassword}
             useChevronRight
           />
@@ -101,7 +100,7 @@ export default function AccountSettingsScreen({ navigation }) {
           onPress={handleDeleteAccount}
           activeOpacity={0.7}
         >
-          <Text style={styles.deleteAccountButtonText}>Delete Account</Text>
+          <Text style={styles.deleteAccountButtonText}>Delete account</Text>
         </TouchableOpacity>
 
       </ScrollView>

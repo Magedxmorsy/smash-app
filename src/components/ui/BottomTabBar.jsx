@@ -57,10 +57,12 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
                            currentNestedRouteName === 'MatchDetails' ||
                            currentNestedRouteName === 'Settings' ||
                            currentNestedRouteName === 'AccountSettings' ||
+                           currentNestedRouteName === 'ChangePassword' ||
                            currentNestedRouteName === 'NotificationsSettings' ||
                            currentNestedRouteName === 'TermsOfService' ||
                            currentNestedRouteName === 'PrivacyPolicy' ||
-                           currentNestedRouteName === 'AboutSmash';
+                           currentNestedRouteName === 'AboutSmash' ||
+                           currentNestedRouteName === 'Feedback';
 
   // Animate tab bar in/out based on route
   useEffect(() => {

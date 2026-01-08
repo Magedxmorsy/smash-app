@@ -10,7 +10,7 @@ import {
   deleteUser
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { auth, db, EmailAuthProvider, reauthenticateWithCredential } from '../config/firebase';
 import { createDefaultNotificationSettings } from './notificationSettingsService';
 
 /**
@@ -419,6 +419,32 @@ export const updateUserProfile = async (uid, profileData) => {
 };
 
 /**
+ * Change user password
+ * Requires reauthentication for security
+ */
+export const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user || !user.email) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Reauthenticate user with current password (Firebase requirement)
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+
+    // Update password
+    await updatePassword(user, newPassword);
+
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Change password error:', error);
+    return { success: false, error: getErrorMessage(error.code) };
+  }
+};
+
+/**
  * Convert Firebase error codes to user-friendly messages
  */
 const getErrorMessage = (errorCode) => {
@@ -436,13 +462,15 @@ const getErrorMessage = (errorCode) => {
     case 'auth/user-not-found':
       return 'No account found with this email';
     case 'auth/wrong-password':
-      return 'Incorrect password';
+      return 'Current password is incorrect';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please try again later';
     case 'auth/network-request-failed':
       return 'Network error. Please check your connection';
     case 'auth/invalid-credential':
       return 'Invalid email or password';
+    case 'auth/requires-recent-login':
+      return 'Please sign in again to change password';
     default:
       return 'An error occurred. Please try again';
   }

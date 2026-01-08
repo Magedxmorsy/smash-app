@@ -16,8 +16,24 @@ const Tab = createBottomTabNavigator();
 function getTabBarVisibility(route) {
   const routeName = getFocusedRouteNameFromRoute(route) ?? route.name;
 
+  console.log('Current route name:', routeName);
+
   // Hide tab bar on detail screens, settings, and modals
-  if (routeName === 'TournamentDetails' || routeName === 'MatchDetails' || routeName === 'Settings' || routeName === 'AccountSettings' || routeName === 'NotificationsSettings' || routeName === 'TermsOfService' || routeName === 'PrivacyPolicy' || routeName === 'AboutSmash' || routeName === 'CreateTournamentModal') {
+  const hiddenRoutes = [
+    'TournamentDetails',
+    'MatchDetails',
+    'Settings',
+    'AccountSettings',
+    'ChangePassword',
+    'NotificationsSettings',
+    'TermsOfService',
+    'PrivacyPolicy',
+    'AboutSmash',
+    'Feedback',
+    'CreateTournamentModal'
+  ];
+
+  if (hiddenRoutes.includes(routeName)) {
     return 'none';
   }
 
@@ -50,9 +66,12 @@ export default function TabNavigator({ onCreateAccount }) {
       <Tab.Screen name="UpdatesTab" component={UpdatesScreen} />
       <Tab.Screen
         name="ProfileTab"
-        options={({ route }) => ({
-          tabBarStyle: { display: getTabBarVisibility(route) }
-        })}
+        options={({ route }) => {
+          const display = getTabBarVisibility(route);
+          return {
+            tabBarStyle: { display }
+          };
+        }}
       >
         {(props) => <ProfileStack {...props} onCreateAccount={onCreateAccount} />}
       </Tab.Screen>
