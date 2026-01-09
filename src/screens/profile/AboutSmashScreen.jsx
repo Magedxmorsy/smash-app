@@ -18,7 +18,7 @@ export default function AboutSmashScreen({ navigation }) {
           <ChevronLeftIcon width={32} height={32} color={Colors.primary300} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>About Smash</Text>
+        <Text style={styles.headerTitle}>About smash</Text>
 
         {/* Empty view to balance the layout */}
         <View style={styles.headerButton} />
@@ -31,7 +31,7 @@ export default function AboutSmashScreen({ navigation }) {
       >
         <Text style={styles.version}>Version 1.0.0</Text>
 
-        <Text style={styles.sectionTitle}>Our Story</Text>
+        <Text style={styles.sectionTitle}>Our story</Text>
         <Text style={styles.paragraph}>
           Smash was born from a simple idea: competitive gaming with friends should be easy, organized, and fun.
         </Text>
@@ -42,7 +42,7 @@ export default function AboutSmashScreen({ navigation }) {
           That's when we decided to build Smash—a platform designed specifically for friends who want to turn their casual game nights into epic tournaments. No corporate sponsors, no prize pools, just pure competition and bragging rights.
         </Text>
 
-        <Text style={styles.sectionTitle}>What We Believe</Text>
+        <Text style={styles.sectionTitle}>What we believe</Text>
         <Text style={styles.paragraph}>
           We believe that the best competitions happen between friends. Whether it's a fighting game showdown, a sports tournament, or any other head-to-head competition, organizing it shouldn't be harder than actually playing.
         </Text>
@@ -50,12 +50,12 @@ export default function AboutSmashScreen({ navigation }) {
           Smash puts the power of tournament organization in your hands. Create brackets, track scores, schedule matches, and keep everyone in the loop—all in one place. We're not here to host tournaments for you; we're here to give you the tools to be the tournament master your friend group deserves.
         </Text>
 
-        <Text style={styles.sectionTitle}>Our Mission</Text>
+        <Text style={styles.sectionTitle}>Our mission</Text>
         <Text style={styles.paragraph}>
           To make competitive gaming accessible and enjoyable for everyone. We're building tools that help friends create memorable moments, settle debates, and crown champions—one tournament at a time.
         </Text>
 
-        <Text style={styles.sectionTitle}>Contact Us</Text>
+        <Text style={styles.sectionTitle}>Contact us</Text>
         <Text style={styles.paragraph}>
           Have feedback, suggestions, or just want to say hi? We'd love to hear from you!
         </Text>

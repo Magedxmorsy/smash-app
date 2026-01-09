@@ -289,6 +289,65 @@ export const TournamentProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Remove a player from a team
+   * - If the player is alone on the team, deletes the entire team
+   * - If the team has 2 players, sets the player position to null
+   * - Recalculates registeredTeams count
+   */
+  const removePlayerFromTeam = async (tournamentId, teamIndex, playerPosition) => {
+    try {
+      const tournament = getTournamentById(tournamentId);
+      if (!tournament) {
+        return { success: false, error: 'Tournament not found' };
+      }
+
+      const teams = tournament.teams || [];
+      const team = teams[teamIndex];
+
+      if (!team || !team[playerPosition]) {
+        return { success: false, error: 'Player not found' };
+      }
+
+      // Check if this is the only player on the team
+      const otherPosition = playerPosition === 'player1' ? 'player2' : 'player1';
+      const isOnlyPlayer = !team[otherPosition];
+
+      let updatedTeams;
+
+      if (isOnlyPlayer) {
+        // Delete the entire team if the player is alone
+        updatedTeams = teams.filter((t, idx) => idx !== teamIndex);
+      } else {
+        // Just remove the player, keep the team with the other player
+        updatedTeams = teams.map((t, idx) =>
+          idx === teamIndex
+            ? {
+                ...t,
+                [playerPosition]: null
+              }
+            : t
+        );
+      }
+
+      // Recalculate registeredTeams (only count complete teams)
+      const registeredTeams = updatedTeams.filter(
+        team => team.player1 && team.player2
+      ).length;
+
+      // Update tournament in Firestore
+      await updateDocument('tournaments', tournamentId, {
+        teams: updatedTeams,
+        registeredTeams
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error removing player:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   const getTournamentById = (tournamentId) => {
     return tournaments.find((t) => t.id === tournamentId);
   };
@@ -326,6 +385,7 @@ export const TournamentProvider = ({ children }) => {
     deleteTournament,
     startTournament,
     joinTournamentTeam,
+    removePlayerFromTeam,
     getTournamentById,
     getHostedTournaments,
     getJoinedTournaments,

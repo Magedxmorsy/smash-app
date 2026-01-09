@@ -51,7 +51,7 @@ export default function SignUpScreen({ onNavigateToLogin, onClose, onEmailSubmit
     if (exists) {
       // Email already registered - show alert and suggest login
       Alert.alert(
-        'Email Already Registered',
+        'Email already registered',
         'This email is already registered. Would you like to sign in instead?',
         [
           {
@@ -59,7 +59,7 @@ export default function SignUpScreen({ onNavigateToLogin, onClose, onEmailSubmit
             style: 'cancel'
           },
           {
-            text: 'Sign In',
+            text: 'Sign in',
             onPress: () => onNavigateToLogin && onNavigateToLogin()
           }
         ]

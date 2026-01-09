@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -12,9 +12,10 @@ export default function Button({
   disabled = false,
   fullWidth = true,
   size = 'large', // 'large' (56px) or 'medium' (48px)
+  loading = false,
 }) {
   const handlePress = () => {
-    if (!disabled) {
+    if (!disabled && !loading) {
       if (Platform.OS === 'ios') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
@@ -23,8 +24,8 @@ export default function Button({
   };
 
   const getButtonStyle = () => {
-    if (disabled) return styles.disabled;
-    
+    if (disabled || loading) return styles.disabled;
+
     switch (variant) {
       case 'primary':
         return styles.primary;
@@ -40,7 +41,7 @@ export default function Button({
   };
 
   const getTextStyle = () => {
-    if (disabled) return styles.textDisabled;
+    if (disabled || loading) return styles.textDisabled;
 
     switch (variant) {
       case 'primary':
@@ -55,6 +56,19 @@ export default function Button({
     }
   };
 
+  const getSpinnerColor = () => {
+    switch (variant) {
+      case 'primary':
+      case 'secondary':
+        return Colors.surface; // White spinner
+      case 'accent':
+      case 'ghost':
+        return Colors.primary300; // Dark spinner
+      default:
+        return Colors.surface;
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -64,26 +78,46 @@ export default function Button({
         !fullWidth && styles.buttonHug,
       ]}
       onPress={handlePress}
-      disabled={disabled}
+      disabled={disabled || loading}
       activeOpacity={1}
       onPressIn={(e) => {
-        e.currentTarget.setNativeProps({
-          style: { transform: [{ scale: 0.98 }] }
-        });
+        if (!loading) {
+          e.currentTarget.setNativeProps({
+            style: { transform: [{ scale: 0.98 }] }
+          });
+        }
       }}
       onPressOut={(e) => {
-        e.currentTarget.setNativeProps({
-          style: { transform: [{ scale: 1 }] }
-        });
+        if (!loading) {
+          e.currentTarget.setNativeProps({
+            style: { transform: [{ scale: 1 }] }
+          });
+        }
       }}
     >
-      <Text style={[
-        styles.text,
-        size === 'medium' && styles.textMedium,
-        getTextStyle()
-      ]}>
-        {title}
-      </Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={getSpinnerColor()} />
+          {title && (
+            <Text style={[
+              styles.text,
+              size === 'medium' && styles.textMedium,
+              getTextStyle(),
+              styles.textLoading
+            ]}>
+              {title}
+            </Text>
+          )}
+        </View>
+      ) : (
+        <Text style={[
+          styles.text,
+          size === 'medium' && styles.textMedium,
+          getTextStyle()
+        ]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -142,5 +176,13 @@ const styles = StyleSheet.create({
   },
   textDisabled: {
     color: Colors.neutral400,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.space2,
+  },
+  textLoading: {
+    marginLeft: Spacing.space2,
   },
 });

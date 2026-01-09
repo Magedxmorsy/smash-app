@@ -38,6 +38,7 @@ export default function CreateTournamentModal({
             onSave={onTournamentCreated}
             onClose={onClose}
             tournament={tournament}
+            showHandle={false}
           />
         </TournamentFormProvider>
       </SafeAreaView>

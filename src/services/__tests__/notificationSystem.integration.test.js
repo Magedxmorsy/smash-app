@@ -19,6 +19,48 @@ import {
   createDefaultNotificationSettings,
 } from '../notificationSettingsService';
 
+// Mock settings storage
+const mockSettingsStore = {
+  'test-user-1': {
+    allNotifications: true,
+    tournamentNotifications: true,
+    teamNotifications: true,
+    matchNotifications: true,
+  },
+  'test-user-2': {
+    allNotifications: true,
+    tournamentNotifications: true,
+    teamNotifications: true,
+    matchNotifications: true,
+  },
+};
+
+// Mock Firestore functions
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn(),
+  addDoc: jest.fn(() => Promise.resolve({ id: 'mock-doc-id' })),
+  updateDoc: jest.fn(() => Promise.resolve()),
+  doc: jest.fn(() => ({ id: 'mock-doc-id' })),
+  getDoc: jest.fn((ref) => {
+    // Extract userId from doc reference path
+    // In real code, ref would have path info, but in tests we'll use a simple approach
+    return Promise.resolve({
+      exists: () => true,
+      data: () => mockSettingsStore['test-user-1'], // Default to test-user-1
+    });
+  }),
+  setDoc: jest.fn((ref, data) => {
+    // Update mock store when settings are saved
+    mockSettingsStore['test-user-1'] = { ...data };
+    return Promise.resolve();
+  }),
+  serverTimestamp: jest.fn(() => new Date()),
+  query: jest.fn(),
+  where: jest.fn(),
+  orderBy: jest.fn(),
+  onSnapshot: jest.fn(),
+}));
+
 // Mock Firebase
 jest.mock('../../config/firebase', () => ({
   db: {},
@@ -29,10 +71,33 @@ jest.mock('../../config/firebase', () => ({
 
 // Mock Firestore operations
 jest.mock('../firestoreService', () => ({
-  createDocument: jest.fn(),
-  updateDocument: jest.fn(),
-  deleteDocument: jest.fn(),
-  getDocument: jest.fn(),
+  createDocument: jest.fn(() => Promise.resolve({ error: null, id: 'mock-doc-id' })),
+  updateDocument: jest.fn((collection, docId, data) => {
+    // Update settings store when settings are updated
+    if (collection === 'notificationSettings') {
+      mockSettingsStore[docId] = { ...mockSettingsStore[docId], ...data };
+    }
+    return Promise.resolve({ error: null });
+  }),
+  deleteDocument: jest.fn(() => Promise.resolve({ error: null })),
+  getDocument: jest.fn((collection, docId) => {
+    // Return settings from store
+    if (collection === 'notificationSettings') {
+      return Promise.resolve({
+        error: null,
+        data: mockSettingsStore[docId] || mockSettingsStore['test-user-1'],
+      });
+    }
+    return Promise.resolve({
+      error: null,
+      data: {
+        allNotifications: true,
+        tournamentNotifications: true,
+        teamNotifications: true,
+        matchNotifications: true,
+      },
+    });
+  }),
   subscribeToCollection: jest.fn(),
 }));
 
@@ -53,6 +118,20 @@ describe('Notification System Integration Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Reset settings store to default values
+    mockSettingsStore['test-user-1'] = {
+      allNotifications: true,
+      tournamentNotifications: true,
+      teamNotifications: true,
+      matchNotifications: true,
+    };
+    mockSettingsStore['test-user-2'] = {
+      allNotifications: true,
+      tournamentNotifications: true,
+      teamNotifications: true,
+      matchNotifications: true,
+    };
   });
 
   describe('Notification Service - Core CRUD', () => {

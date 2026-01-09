@@ -3,8 +3,14 @@ import { render } from '@testing-library/react-native';
 import Avatar from '../Avatar';
 
 describe('Avatar', () => {
-  it('should render with initials from name', () => {
+  it('should render with two initials from full name', () => {
     const { getByText } = render(<Avatar name="John Doe" />);
+
+    expect(getByText('JD')).toBeTruthy();
+  });
+
+  it('should render with single initial for single name', () => {
+    const { getByText } = render(<Avatar name="John" />);
 
     expect(getByText('J')).toBeTruthy();
   });
@@ -28,15 +34,21 @@ describe('Avatar', () => {
   });
 
   it('should handle name with extra spaces', () => {
-    const { getByText } = render(<Avatar name="  John  " />);
+    const { getByText } = render(<Avatar name="  John  Doe  " />);
 
-    expect(getByText('J')).toBeTruthy();
+    expect(getByText('JD')).toBeTruthy();
   });
 
-  it('should render lowercase name as uppercase initial', () => {
-    const { getByText } = render(<Avatar name="alice" />);
+  it('should handle name with multiple middle names', () => {
+    const { getByText } = render(<Avatar name="John Michael Smith" />);
 
-    expect(getByText('A')).toBeTruthy();
+    expect(getByText('JS')).toBeTruthy();
+  });
+
+  it('should render lowercase name as uppercase initials', () => {
+    const { getByText } = render(<Avatar name="alice cooper" />);
+
+    expect(getByText('AC')).toBeTruthy();
   });
 
   it('should render image when source is provided', () => {
@@ -58,34 +70,34 @@ describe('Avatar', () => {
   });
 
   it('should support small size', () => {
-    const { getByText } = render(<Avatar name="John" size="small" />);
+    const { getByText } = render(<Avatar name="John Smith" size="small" />);
 
-    expect(getByText('J')).toBeTruthy();
+    expect(getByText('JS')).toBeTruthy();
   });
 
   it('should support medium size (default)', () => {
-    const { getByText } = render(<Avatar name="John" size="medium" />);
+    const { getByText } = render(<Avatar name="John Smith" size="medium" />);
 
-    expect(getByText('J')).toBeTruthy();
+    expect(getByText('JS')).toBeTruthy();
   });
 
   it('should support large size', () => {
-    const { getByText } = render(<Avatar name="John" size="large" />);
+    const { getByText } = render(<Avatar name="John Smith" size="large" />);
 
-    expect(getByText('J')).toBeTruthy();
+    expect(getByText('JS')).toBeTruthy();
   });
 
   it('should apply custom background color', () => {
     const { getByText } = render(
-      <Avatar name="John" backgroundColor="#FF0000" />
+      <Avatar name="John Smith" backgroundColor="#FF0000" />
     );
 
-    expect(getByText('J')).toBeTruthy();
+    expect(getByText('JS')).toBeTruthy();
   });
 
   it('should render with border when withBorder is true', () => {
-    const { getByText } = render(<Avatar name="John" withBorder={true} />);
+    const { getByText } = render(<Avatar name="John Smith" withBorder={true} />);
 
-    expect(getByText('J')).toBeTruthy();
+    expect(getByText('JS')).toBeTruthy();
   });
 });

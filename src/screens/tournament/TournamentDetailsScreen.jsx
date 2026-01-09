@@ -17,6 +17,7 @@ import Badge from '../../components/ui/Badge';
 import DetailsListItem from '../../components/ui/DetailsListItem';
 import EmptyState from '../../components/ui/EmptyState';
 import TeamsList from '../../components/tournament/TeamsList';
+import WinnersBanner from '../../components/tournament/WinnersBanner';
 import Player from '../../components/ui/Player';
 import MatchCard from '../../components/match/MatchCard';
 import RecordScoreModal from '../../components/match/RecordScoreModal';
@@ -44,7 +45,7 @@ import CloseIcon from '../../../assets/icons/close.svg';
 export default function TournamentDetailsScreen({ navigation, route }) {
   const { tournament: propTournament, tournamentId, onAuthRequired, openStartSheet } = route?.params || {};
   const { isAuthenticated, userData } = useAuth();
-  const { deleteTournament, getTournamentById, updateTournament } = useTournaments();
+  const { deleteTournament, getTournamentById, updateTournament, removePlayerFromTeam } = useTournaments();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [rulesExpanded, setRulesExpanded] = useState(false);
@@ -445,6 +446,56 @@ export default function TournamentDetailsScreen({ navigation, route }) {
     }
   };
 
+  const handleRemovePlayer = async (teamIndex, playerPosition) => {
+    if (!tournament?.id) {
+      showToast('Cannot remove player. Tournament not found.', 'error');
+      return { success: false, error: 'Tournament not found' };
+    }
+
+    try {
+      // Find the actual team index in tournament.teams array
+      // teamIndex is from the displayed/filtered teams, we need to find it in the original array
+      const displayedTeams = teams; // teams from generateTeams()
+      const teamToRemove = displayedTeams[teamIndex];
+
+      if (!teamToRemove) {
+        showToast('Team not found.', 'error');
+        return { success: false, error: 'Team not found' };
+      }
+
+      // Find the actual index in tournament.teams by matching player data
+      const actualTeamIndex = tournament.teams.findIndex(t =>
+        (t.player1?.userId === teamToRemove.player1?.userId &&
+         t.player2?.userId === teamToRemove.player2?.userId) ||
+        (t.player1?.userId === teamToRemove.player1?.userId && !t.player2 && !teamToRemove.player2) ||
+        (t.player2?.userId === teamToRemove.player2?.userId && !t.player1 && !teamToRemove.player1)
+      );
+
+      if (actualTeamIndex === -1) {
+        showToast('Could not find team in tournament.', 'error');
+        return { success: false, error: 'Team not found in tournament' };
+      }
+
+      const result = await removePlayerFromTeam(tournament.id, actualTeamIndex, playerPosition);
+
+      if (result.success) {
+        showToast('Player removed successfully', 'success');
+
+        // Check if the removed player was the current user
+        const removedPlayer = teamToRemove[playerPosition];
+        if (removedPlayer?.userId === userData?.uid) {
+          setUserHasTeam(false);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error removing player:', error);
+      showToast('Failed to remove player. Please try again.', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
   const handleEditTournament = () => {
     console.log('🔧 Edit tournament clicked', { tournamentId: tournament?.id, activeTab });
 
@@ -739,7 +790,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
   const handleDeleteTournament = () => {
     Alert.alert(
-      'Delete Tournament',
+      'Delete tournament',
       'Are you sure you want to delete this tournament? This action cannot be undone.',
       [
         {
@@ -1022,6 +1073,11 @@ export default function TournamentDetailsScreen({ navigation, route }) {
           style={styles.badgeMargin}
         />
 
+        {/* Winners Banner - Only show for FINISHED tournaments */}
+        {tournament.status === 'FINISHED' && (
+          <WinnersBanner tournament={tournament} />
+        )}
+
         {/* Tab Selector - Only show for non-registration stages */}
         {tournament.status !== 'REGISTRATION' && (
           <TabSelector
@@ -1159,6 +1215,8 @@ export default function TournamentDetailsScreen({ navigation, route }) {
                 isAdmin={isAdmin}
                 currentUserId={userData?.uid}
                 onStartTournament={handleStartTournament}
+                onRemovePlayer={handleRemovePlayer}
+                tournamentStatus={tournament.status}
               />
             )}
           </>
@@ -1596,6 +1654,7 @@ export default function TournamentDetailsScreen({ navigation, route }) {
         onEdit={handleEditTournament}
         onDelete={handleDeleteTournament}
         onFillDummyData={handleFillWithDummyData}
+        tournamentStatus={tournament?.status}
       />
 
       {/* Edit Tournament Modal */}

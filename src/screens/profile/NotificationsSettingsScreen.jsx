@@ -74,7 +74,7 @@ export default function NotificationsSettingsScreen({ navigation }) {
         {/* Master Toggle */}
         <CardGroup>
           <ListItem
-            value="Enable All Notifications"
+            value="Enable all notifications"
             subtitle="Turn all notifications on or off"
             showChevron={false}
             rightComponent={
@@ -87,9 +87,9 @@ export default function NotificationsSettingsScreen({ navigation }) {
         </CardGroup>
 
         {/* Category Toggles */}
-        <CardGroup title="Notification Categories">
+        <CardGroup title="Notification categories">
           <ListItem
-            value="Tournament Notifications"
+            value="Tournament notifications"
             subtitle="Invites, updates, start times, and results"
             showChevron={false}
             rightComponent={
@@ -100,7 +100,7 @@ export default function NotificationsSettingsScreen({ navigation }) {
             }
           />
           <ListItem
-            value="Team Notifications"
+            value="Team notifications"
             subtitle="Team invites and member updates"
             showChevron={false}
             rightComponent={
@@ -111,7 +111,7 @@ export default function NotificationsSettingsScreen({ navigation }) {
             }
           />
           <ListItem
-            value="Match Notifications"
+            value="Match notifications"
             subtitle="Match times, scores, and results"
             showChevron={false}
             rightComponent={

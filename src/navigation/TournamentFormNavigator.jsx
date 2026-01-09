@@ -12,7 +12,7 @@ import CloseIcon from '../../assets/icons/close.svg';
 import CheckIcon from '../../assets/icons/check.svg';
 import { useTournamentForm } from '../contexts/TournamentFormContext';
 
-export default function TournamentFormNavigator({ editMode, onSave, onClose, tournament }) {
+export default function TournamentFormNavigator({ editMode, onSave, onClose, tournament, showHandle = true }) {
   const [currentPage, setCurrentPage] = useState('main');
   const [pageHistory, setPageHistory] = useState(['main']);
 
@@ -35,10 +35,18 @@ export default function TournamentFormNavigator({ editMode, onSave, onClose, tou
     currentPage === 'main' ? (editMode ? 'Edit tournament' : 'Create tournament') :
     currentPage === 'rules' ? 'Tournament rules' :
     currentPage === 'format' ? 'Tournament format' :
+    currentPage === 'courts' ? (editMode ? 'Edit courts' : 'Add courts') :
     'Add courts';
 
   return (
     <View style={styles.container}>
+      {/* Modal Handle - only show if requested (for navigation-based modals) */}
+      {showHandle && (
+        <View style={styles.handleContainer}>
+          <View style={styles.handle} />
+        </View>
+      )}
+
       {/* Custom Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -79,7 +87,7 @@ export default function TournamentFormNavigator({ editMode, onSave, onClose, tou
           />
         )}
         {currentPage === 'rules' && <RulesFormScreen onNavigate={navigateToPage} />}
-        {currentPage === 'courts' && <CourtsFormScreen onNavigate={navigateToPage} />}
+        {currentPage === 'courts' && <CourtsFormScreen onNavigate={navigateToPage} editMode={editMode} />}
         {currentPage === 'format' && <FormatFormScreen onNavigate={navigateToPage} />}
       </View>
     </View>
@@ -90,6 +98,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: Spacing.space2,
+    paddingBottom: 0,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.neutral300,
   },
   header: {
     flexDirection: 'row',

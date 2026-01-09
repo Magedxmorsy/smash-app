@@ -13,7 +13,11 @@ const SIZES = {
 const Avatar = ({ size = 'medium', source, name = '', withBorder = false, backgroundColor }) => {
   const getInitials = (name) => {
     if (!name) return '?';
-    return name.trim().charAt(0).toUpperCase();
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    // Return first character of first name + first character of last name
+    return parts[0].charAt(0).toUpperCase() + parts[parts.length - 1].charAt(0).toUpperCase();
   };
 
   const { dimension, fontSize } = SIZES[size] || SIZES.medium;

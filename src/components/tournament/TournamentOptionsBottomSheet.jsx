@@ -13,11 +13,13 @@ import EditIcon from '../../../assets/icons/edit.svg';
 import TrashIcon from '../../../assets/icons/trash.svg';
 import TeamIcon from '../../../assets/icons/team.svg';
 
-export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit, onDelete, onFillDummyData }) {
+export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit, onDelete, onFillDummyData, tournamentStatus }) {
   const insets = useSafeAreaInsets();
 
+  const isTournamentFinished = tournamentStatus === 'FINISHED';
+
   const handleEdit = () => {
-    if (onEdit) {
+    if (onEdit && !isTournamentFinished) {
       onEdit();
     }
   };
@@ -31,7 +33,7 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
 
   const handleFillDummyData = () => {
     onClose();
-    if (onFillDummyData) {
+    if (onFillDummyData && !isTournamentFinished) {
       onFillDummyData();
     }
   };
@@ -60,7 +62,9 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
           icon={<EditIcon />}
           iconSize={32}
           variant="primary"
+          spacing={2}
           onPress={handleEdit}
+          disabled={isTournamentFinished}
         />
 
         {/* Fill with Dummy Data Option (Testing Only) */}
@@ -69,7 +73,9 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
           icon={<TeamIcon />}
           iconSize={32}
           variant="primary"
+          spacing={2}
           onPress={handleFillDummyData}
+          disabled={isTournamentFinished}
         />
 
         {/* Delete Tournament Option */}
@@ -78,6 +84,7 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
           icon={<TrashIcon />}
           iconSize={32}
           variant="destructive"
+          spacing={2}
           onPress={handleDelete}
           style={styles.deleteOption}
         />
@@ -120,7 +127,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   deleteOption: {
-    marginBottom: Spacing.space4,
+    marginBottom: Spacing.space2,
   },
   buttonsContainer: {
     gap: Spacing.space2,

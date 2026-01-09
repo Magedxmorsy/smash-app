@@ -131,13 +131,25 @@ export const deleteDocument = async (collectionName, documentId) => {
  */
 export const subscribeToDocument = (collectionName, documentId, callback) => {
   const docRef = doc(db, collectionName, documentId);
-  return onSnapshot(docRef, (doc) => {
-    if (doc.exists()) {
-      callback({ id: doc.id, ...doc.data() });
-    } else {
-      callback(null);
+  return onSnapshot(
+    docRef,
+    (doc) => {
+      if (doc.exists()) {
+        callback({ id: doc.id, ...doc.data() });
+      } else {
+        callback(null);
+      }
+    },
+    (error) => {
+      // Return empty data on permission errors (expected for unauthenticated users)
+      if (error.code === 'permission-denied') {
+        callback(null);
+      } else {
+        // Log other unexpected errors
+        console.error('Error in document snapshot listener:', error);
+      }
     }
-  });
+  );
 };
 
 /**
@@ -159,11 +171,23 @@ export const subscribeToCollection = (collectionName, conditions = [], callback)
     q = query(q, ...constraints);
   }
 
-  return onSnapshot(q, (querySnapshot) => {
-    const documents = [];
-    querySnapshot.forEach((doc) => {
-      documents.push({ id: doc.id, ...doc.data() });
-    });
-    callback(documents);
-  });
+  return onSnapshot(
+    q,
+    (querySnapshot) => {
+      const documents = [];
+      querySnapshot.forEach((doc) => {
+        documents.push({ id: doc.id, ...doc.data() });
+      });
+      callback(documents);
+    },
+    (error) => {
+      // Return empty array on permission errors (expected for unauthenticated users)
+      if (error.code === 'permission-denied') {
+        callback([]);
+      } else {
+        // Log other unexpected errors
+        console.error('Error in collection snapshot listener:', error);
+      }
+    }
+  );
 };

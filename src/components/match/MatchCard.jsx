@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../constants/Colors';
@@ -32,6 +32,7 @@ export default function MatchCard({
   onViewDetails,
   highlightBorder = false,
   canRecord = true,
+  animationIndex = null, // Index for stagger animation (null = no animation)
 }) {
   // Add defensive checks for missing team data
   if (!leftTeam || !rightTeam || !leftTeam.player1 || !rightTeam.player1) {
@@ -41,8 +42,25 @@ export default function MatchCard({
   // Format date/time consistently
   const formattedDateTime = formatDateTime(dateTime);
 
-  // Animation for press state
+  // Entrance animation (slide up only)
+  const slideAnim = useRef(new Animated.Value(animationIndex !== null ? 20 : 0)).current;
+
+  // Press animation
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  // Run entrance animation on mount if animationIndex is provided
+  useEffect(() => {
+    if (animationIndex !== null) {
+      const delay = animationIndex * 80; // 80ms stagger between cards
+
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [animationIndex]);
 
   const handlePressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -142,7 +160,7 @@ export default function MatchCard({
 
       {isPast && onAddScore && canRecord && (
         <Button
-          title={scoreRecorded ? "Edit score" : "Record score"}
+          title={scoreRecorded ? "Edit score" : "Add score"}
           variant="ghost"
           size="large"
           onPress={onAddScore}
@@ -160,7 +178,10 @@ export default function MatchCard({
     >
       <Animated.View
         style={{
-          transform: [{ scale: scaleAnim }],
+          transform: [
+            { translateY: slideAnim },
+            { scale: scaleAnim }
+          ],
         }}
       >
         <View style={[styles.card, highlightBorder && styles.highlightBorder]}>
@@ -169,9 +190,15 @@ export default function MatchCard({
       </Animated.View>
     </TouchableOpacity>
   ) : (
-    <View style={[styles.card, highlightBorder && styles.highlightBorder]}>
-      <CardContent />
-    </View>
+    <Animated.View
+      style={{
+        transform: [{ translateY: slideAnim }],
+      }}
+    >
+      <View style={[styles.card, highlightBorder && styles.highlightBorder]}>
+        <CardContent />
+      </View>
+    </Animated.View>
   );
 }
 

@@ -74,11 +74,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: Spacing.space4,
-    paddingHorizontal: Spacing.space4,
+    paddingVertical: Spacing.space3,
+    paddingHorizontal: Spacing.space3,
     borderRadius: BorderRadius.radius4,
     borderWidth: 1,
-    gap: Spacing.space3,
+    gap: Spacing.space2,
   },
   iconContainer: {
     flexShrink: 0,

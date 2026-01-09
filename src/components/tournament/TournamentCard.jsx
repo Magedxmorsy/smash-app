@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Share, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../constants/Colors';
@@ -67,6 +67,7 @@ export default function TournamentCard({
   isHost = false,
   userJoined = false,
   hostId = null,
+  animationIndex = null, // Index for stagger animation (null = no animation)
 }) {
   const isRegistration = status === 'REGISTRATION';
 
@@ -141,7 +142,25 @@ export default function TournamentCard({
   }
   // For GROUP_STAGE and other statuses, just show avatars without messages
 
+  // Entrance animation (slide up only)
+  const slideAnim = useRef(new Animated.Value(animationIndex !== null ? 20 : 0)).current;
+
+  // Press animation
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  // Run entrance animation on mount if animationIndex is provided
+  useEffect(() => {
+    if (animationIndex !== null) {
+      const delay = animationIndex * 80; // 80ms stagger between cards
+
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [animationIndex]);
 
   const handlePressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -183,7 +202,10 @@ export default function TournamentCard({
     >
       <Animated.View
         style={{
-          transform: [{ scale: scaleAnim }],
+          transform: [
+            { translateY: slideAnim },
+            { scale: scaleAnim }
+          ],
         }}
       >
         <Card style={styles.card}>

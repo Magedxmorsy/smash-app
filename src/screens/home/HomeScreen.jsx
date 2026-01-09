@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, Animated } from 'react-native';
 import * as Calendar from 'expo-calendar';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -12,10 +12,25 @@ import CreateTournamentModal from '../../components/tournament/CreateTournamentM
 import MatchCard from '../../components/match/MatchCard';
 import UpcomingMatchWrapper from '../../components/match/UpcomingMatchWrapper';
 import RecordScoreModal from '../../components/match/RecordScoreModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function HomeScreen({ navigation, onCreateTournament }) {
+  const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [showRecordScoreModal, setShowRecordScoreModal] = useState(false);
+
+  // Animation for "Your last match" section
+  const lastMatchSlideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    // Animate after 80ms (after the first match card)
+    Animated.timing(lastMatchSlideAnim, {
+      toValue: 0,
+      duration: 350,
+      delay: 80, // Same as second card's delay
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleCreateTournament = () => {
     if (onCreateTournament) {
@@ -164,9 +179,10 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
   const [lastMatch, setLastMatch] = useState({
     leftTeam: {
       player1: {
-        firstName: 'Ahmed',
-        lastName: 'Basyouni',
-        avatarSource: require('../../../assets/avatars/ahmed.jpg'),
+        firstName: user?.firstName || 'Maged',
+        lastName: user?.lastName || 'Morsy',
+        avatarSource: user?.profilePicture ? { uri: user.profilePicture } : null,
+        id: user?.uid,
       },
       player2: {
         firstName: 'Leo',
@@ -225,25 +241,33 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
             highlightBorder={true}
             onAddToCalendar={handleAddToCalendar}
             onPress={() => handleMatchPress(nextMatch)}
+            animationIndex={0}
           />
         </UpcomingMatchWrapper>
 
         {/* Last Match Section */}
-        <Text style={[styles.sectionTitle, styles.lastMatchTitle]}>Your last match</Text>
-        <MatchCard
-          variant="after"
-          leftTeam={lastMatch.leftTeam}
-          rightTeam={lastMatch.rightTeam}
-          tournamentName={lastMatch.tournamentName}
-          status={lastMatch.status}
-          dateTime={lastMatch.dateTime}
-          location={lastMatch.location}
-          isPast={lastMatch.isPast}
-          score={lastMatch.score}
-          scoreRecorded={lastMatch.scoreRecorded}
-          onAddScore={handleAddScore}
-          onPress={() => handleMatchPress(lastMatch)}
-        />
+        <Animated.View
+          style={{
+            transform: [{ translateY: lastMatchSlideAnim }],
+          }}
+        >
+          <Text style={[styles.sectionTitle, styles.lastMatchTitle]}>Your last match</Text>
+          <MatchCard
+            variant="after"
+            leftTeam={lastMatch.leftTeam}
+            rightTeam={lastMatch.rightTeam}
+            tournamentName={lastMatch.tournamentName}
+            status={lastMatch.status}
+            dateTime={lastMatch.dateTime}
+            location={lastMatch.location}
+            isPast={lastMatch.isPast}
+            score={lastMatch.score}
+            scoreRecorded={lastMatch.scoreRecorded}
+            onAddScore={handleAddScore}
+            onPress={() => handleMatchPress(lastMatch)}
+            animationIndex={null}
+          />
+        </Animated.View>
       </ScrollView>
 
       <CreateTournamentModal

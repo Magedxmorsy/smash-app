@@ -13,7 +13,7 @@ import TrashIcon from '../../../assets/icons/trash.svg';
 import PlusIcon from '../../../assets/icons/plus.svg';
 import CheckIcon from '../../../assets/icons/check.svg';
 
-export default function CourtsFormScreen({ onNavigate, navigation }) {
+export default function CourtsFormScreen({ onNavigate, navigation, editMode = false }) {
   const insets = useSafeAreaInsets();
   const { courtNumbers, setCourtNumbers } = useTournamentForm();
 
@@ -87,7 +87,7 @@ export default function CourtsFormScreen({ onNavigate, navigation }) {
               keyboardType="default"
               showChevron={false}
               rightComponent={
-                tempCourtFields.length > 1 ? (
+                tempCourtFields.length > 1 && !editMode ? (
                   <TouchableOpacity
                     onPress={() => handleRemoveCourtField(field.id)}
                     style={styles.removeButton}
@@ -99,17 +99,21 @@ export default function CourtsFormScreen({ onNavigate, navigation }) {
             />
           ))}
 
-          <LinkButton
-            title="Add another court"
-            icon={<PlusIcon />}
-            variant="neutral"
-            onPress={handleAddCourtField}
-            style={styles.addCourtButton}
-          />
+          {!editMode && (
+            <LinkButton
+              title="Add another court"
+              icon={<PlusIcon />}
+              variant="neutral"
+              onPress={handleAddCourtField}
+              style={styles.addCourtButton}
+            />
+          )}
         </CardGroup>
 
       <Text style={styles.courtHint}>
-        Enter court numbers or names. You can use numbers (e.g., "2"), names (e.g., "Court A"), or custom labels.
+        {editMode
+          ? 'You can edit court names, but cannot add or remove courts after tournament creation.'
+          : 'Enter court numbers or names. You can use numbers (e.g., "2"), names (e.g., "Court A"), or custom labels.'}
       </Text>
     </ScrollView>
   );

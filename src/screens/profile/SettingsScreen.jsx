@@ -13,6 +13,7 @@ import UpdatesIcon from '../../../assets/icons/updates.svg';
 import TermsIcon from '../../../assets/icons/terms.svg';
 import RulesIcon from '../../../assets/icons/rules.svg';
 import InfoIcon from '../../../assets/icons/info.svg';
+import EmailIcon from '../../../assets/icons/email.svg';
 import ChevronLeftIcon from '../../../assets/icons/chevronleft.svg';
 
 export default function SettingsScreen({ navigation }) {
@@ -20,7 +21,7 @@ export default function SettingsScreen({ navigation }) {
 
   const handleLogOut = () => {
     Alert.alert(
-      'Log Out',
+      'Log out',
       'Are you sure you want to log out?',
       [
         {
@@ -28,7 +29,7 @@ export default function SettingsScreen({ navigation }) {
           style: 'cancel',
         },
         {
-          text: 'Log Out',
+          text: 'Log out',
           style: 'destructive',
           onPress: async () => {
             const result = await logOut();
@@ -60,6 +61,10 @@ export default function SettingsScreen({ navigation }) {
 
   const handleAbout = () => {
     navigation.navigate('AboutSmash');
+  };
+
+  const handleFeedback = () => {
+    navigation.navigate('Feedback');
   };
 
   return (
@@ -102,20 +107,26 @@ export default function SettingsScreen({ navigation }) {
           />
           <ListItem
             icon={<TermsIcon width={24} height={24} />}
-            value="Terms of Service"
+            value="Terms of service"
             onPress={handleTerms}
             useChevronRight
           />
           <ListItem
             icon={<RulesIcon width={24} height={24} />}
-            value="Privacy Policy"
+            value="Privacy policy"
             onPress={handlePrivacyPolicy}
             useChevronRight
           />
           <ListItem
             icon={<InfoIcon width={24} height={24} />}
-            value="About Smash"
+            value="About smash"
             onPress={handleAbout}
+            useChevronRight
+          />
+          <ListItem
+            icon={<EmailIcon width={24} height={24} />}
+            value="Send feedback"
+            onPress={handleFeedback}
             useChevronRight
           />
         </CardGroup>
@@ -127,7 +138,7 @@ export default function SettingsScreen({ navigation }) {
             onPress={handleLogOut}
             activeOpacity={0.7}
           >
-            <Text style={styles.logOutButtonText}>Log Out</Text>
+            <Text style={styles.logOutButtonText}>Log out</Text>
           </TouchableOpacity>
         </View>
 

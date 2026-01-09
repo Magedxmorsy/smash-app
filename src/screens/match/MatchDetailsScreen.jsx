@@ -85,7 +85,7 @@ export default function MatchDetailsScreen({ navigation, route }) {
 
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
+          'Permission required',
           'Calendar permission is required to add events.',
           [{ text: 'OK', style: 'cancel' }]
         );
@@ -248,7 +248,7 @@ export default function MatchDetailsScreen({ navigation, route }) {
       : ['Google Maps', 'Cancel'];
 
     Alert.alert(
-      'Open in Maps',
+      'Open in maps',
       'Choose your preferred maps app',
       [
         ...(Platform.OS === 'ios' ? [{
@@ -407,7 +407,7 @@ export default function MatchDetailsScreen({ navigation, route }) {
             />
           ) : canRecordScore() ? (
             <Button
-              title={scoreRecorded ? "Edit score" : "Record score"}
+              title={scoreRecorded ? "Edit score" : "Add score"}
               variant="accent"
               size="large"
               onPress={handleRecordScore}

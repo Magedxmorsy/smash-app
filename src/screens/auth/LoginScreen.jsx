@@ -175,18 +175,22 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
               </>
             )}
 
-            <Button
-              title={isLoading ? 'Please wait...' : (showPasswordField ? 'Login' : 'Continue')}
-              onPress={showPasswordField ? handleLogin : handleContinue}
-              variant="primary"
-              disabled={isLoading}
-            />
+            <View style={styles.buttonGroup}>
+              <Button
+                title={showPasswordField ? 'Login' : 'Continue'}
+                onPress={showPasswordField ? handleLogin : handleContinue}
+                variant="primary"
+                loading={isLoading}
+              />
 
-            {showPasswordField && (
-              <TouchableOpacity onPress={onNavigateToSignUp}>
-                <Text style={styles.createAccount}>Create new account</Text>
-              </TouchableOpacity>
-            )}
+              {showPasswordField && (
+                <Button
+                  title="Create new account"
+                  onPress={onNavigateToSignUp}
+                  variant="ghost"
+                />
+              )}
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -246,6 +250,9 @@ const styles = StyleSheet.create({
   form: {
     gap: Spacing.space4,
   },
+  buttonGroup: {
+    gap: Spacing.space2,
+  },
   passwordContainer: {
     gap: Spacing.space2,
   },
@@ -263,11 +270,5 @@ const styles = StyleSheet.create({
     fontFamily: 'GeneralSans-Medium',
     fontSize: Typography.body200,
     color: Colors.neutral400,
-  },
-  createAccount: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.body100,
-    color: Colors.primary300,
-    textAlign: 'center',
   },
 });

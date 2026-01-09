@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Modal, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import FullScreenModal from '../ui/FullScreenModal';
+import Avatar from '../ui/Avatar';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
+import LinkButton from '../ui/LinkButton';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
+import CloseIcon from '../../../assets/icons/close.svg';
 import ChangeIcon from '../../../assets/icons/change.svg';
 
 export default function EditProfileModal({ visible, onClose }) {
@@ -92,75 +95,126 @@ export default function EditProfileModal({ visible, onClose }) {
     }
   };
 
-  const getInitials = () => {
-    if (!firstName && !lastName) return '?';
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
-
   return (
-    <FullScreenModal
+    <Modal
       visible={visible}
-      onClose={onClose}
-      title="Edit Profile"
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.initials}>{getInitials()}</Text>
-              </View>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.changePhotoButton}
-            onPress={pickImage}
-            activeOpacity={0.7}
-          >
-            <ChangeIcon width={24} height={24} color={Colors.neutral400} />
-            <Text style={styles.changePhotoText}>Change photo</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Swipe Handle */}
+        <View style={styles.handleContainer} pointerEvents="none">
+          <View style={styles.handle} />
         </View>
 
-        {/* Form Fields */}
-        <View style={styles.formSection}>
-          <Input
-            label="First Name"
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder="Enter your first name"
-            autoCapitalize="words"
-          />
-          <Input
-            label="Last Name"
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder="Enter your last name"
-            autoCapitalize="words"
-          />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.headerIcon}>
+            <CloseIcon width={32} height={32} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit profile</Text>
+          <View style={styles.headerIcon} />
         </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Avatar Section */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarContainer}>
+              <Avatar
+                size="large"
+                source={avatarUri}
+                name={`${firstName} ${lastName}`}
+              />
+            </View>
+            <LinkButton
+              title="Change photo"
+              icon={<ChangeIcon />}
+              onPress={pickImage}
+              variant="neutral"
+              iconSize={24}
+            />
+          </View>
+
+          {/* Form Fields */}
+          <View style={styles.formSection}>
+            <Input
+              label="First name"
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Enter your first name"
+              autoCapitalize="words"
+            />
+            <Input
+              label="Last name"
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Enter your last name"
+              autoCapitalize="words"
+            />
+          </View>
+        </ScrollView>
 
         {/* Save Button */}
         <View style={styles.buttonContainer}>
           <Button
-            title={isSaving ? 'Saving...' : 'Save Changes'}
+            title="Save changes"
             onPress={handleSave}
             variant="primary"
-            disabled={isSaving}
+            loading={isSaving}
             fullWidth
           />
         </View>
-      </View>
-    </FullScreenModal>
+      </SafeAreaView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+    backgroundColor: Colors.background,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: Spacing.space2,
+    paddingBottom: 0,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.neutral300,
+    borderRadius: 2,
+  },
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.space2,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body100,
+    color: Colors.primary300,
+    lineHeight: 24,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: Spacing.space4,
   },
   avatarSection: {
@@ -170,39 +224,11 @@ const styles = StyleSheet.create({
   avatarContainer: {
     marginBottom: Spacing.space2,
   },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-  },
-  avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.neutral200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  initials: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.headline200,
-    color: Colors.primary300,
-  },
-  changePhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.space1,
-  },
-  changePhotoText: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.body200,
-    color: Colors.neutral400,
-  },
   formSection: {
     gap: Spacing.space4,
-    marginBottom: Spacing.space6,
   },
   buttonContainer: {
-    marginTop: 'auto',
+    padding: Spacing.space4,
+    paddingBottom: Spacing.space4 + 20,
   },
 });

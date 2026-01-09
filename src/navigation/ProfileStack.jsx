@@ -100,12 +100,18 @@ export default function ProfileStack({ onCreateAccount }) {
           animation: 'slide_from_right',
         }}
       />
-      <Stack.Group screenOptions={{ presentation: 'modal' }}>
+      <Stack.Group screenOptions={{
+        presentation: 'modal',
+        gestureEnabled: true,
+        fullScreenGestureEnabled: false,
+      }}>
         <Stack.Screen
           name="CreateTournamentModal"
           options={{
             headerShown: false,
             animation: 'slide_from_bottom',
+            gestureEnabled: true,
+            fullScreenGestureEnabled: false,
           }}
         >
           {(props) => (

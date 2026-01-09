@@ -11,23 +11,24 @@ export default function UpdatesScreen({ navigation }) {
   const { notifications, loading, markAsRead } = useNotifications();
 
   const handleNotificationPress = (notification) => {
-    // Mark notification as read
+    // Mark notification as read when tapped
     if (!notification.read) {
       markAsRead(notification.id);
     }
 
-    // Deep link to tournament or match if metadata exists
-    if (notification.metadata?.tournamentId) {
-      navigation.navigate('CompeteTab', {
-        screen: 'TournamentDetails',
-        params: { tournamentId: notification.metadata.tournamentId }
-      });
-    } else if (notification.metadata?.matchId) {
-      navigation.navigate('HomeTab', {
-        screen: 'MatchDetails',
-        params: { matchId: notification.metadata.matchId }
-      });
-    }
+    // Optional: Deep link to tournament or match if metadata exists
+    // Commenting out navigation for now - user just wants to mark as read on tap
+    // if (notification.metadata?.tournamentId) {
+    //   navigation.navigate('CompeteTab', {
+    //     screen: 'TournamentDetails',
+    //     params: { tournamentId: notification.metadata.tournamentId }
+    //   });
+    // } else if (notification.metadata?.matchId) {
+    //   navigation.navigate('HomeTab', {
+    //     screen: 'MatchDetails',
+    //     params: { matchId: notification.metadata.matchId }
+    //   });
+    // }
   };
 
   // Helper to create action button for specific notification types
@@ -105,7 +106,7 @@ export default function UpdatesScreen({ navigation }) {
                 ...notification,
                 actionButton: getActionButton(notification),
               }}
-              onPress={null} // Disabled for now - navigation needs to be fixed
+              onPress={() => handleNotificationPress(notification)}
               showDivider={index < notifications.length - 1}
             />
           ))}

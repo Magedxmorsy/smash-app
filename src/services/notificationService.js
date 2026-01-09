@@ -75,7 +75,7 @@ export const createNotification = async (userId, notificationData) => {
  *
  * @param {string[]} userIds - Array of user IDs
  * @param {object} notificationData - Notification data (same structure as createNotification)
- * @returns {Promise<{success: boolean, error: string|null}>}
+ * @returns {Promise<{count: number, error: string|null}>}
  */
 export const createNotificationsForUsers = async (userIds, notificationData) => {
   try {
@@ -87,12 +87,15 @@ export const createNotificationsForUsers = async (userIds, notificationData) => 
       createNotification(userId, notificationData)
     );
 
-    await Promise.all(promises);
+    const results = await Promise.all(promises);
 
-    return { success: true, error: null };
+    // Count successful creations (those with an ID)
+    const successCount = results.filter(result => result.id !== null).length;
+
+    return { count: successCount, error: null };
   } catch (error) {
     console.error('Error creating batch notifications:', error);
-    return { success: false, error: error.message };
+    return { count: 0, error: error.message };
   }
 };
 

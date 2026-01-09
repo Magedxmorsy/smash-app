@@ -10,6 +10,7 @@ import TournamentCard from '../../components/tournament/TournamentCard';
 import Avatar from '../../components/ui/Avatar';
 import { Spacing } from '../../constants/Spacing';
 import { Typography } from '../../constants/Typography';
+import { createTestFinishedTournament } from '../../utils/createTestFinishedTournament';
 
 export default function CompeteScreen({ navigation }) {
   const { tournaments: allTournaments, getOngoingTournaments, getCompletedTournaments } = useTournaments();
@@ -43,6 +44,17 @@ export default function CompeteScreen({ navigation }) {
     }
   };
 
+  // TEST FUNCTION - Create a finished tournament with winners
+  const handleCreateTestTournament = async () => {
+    const tournament = await createTestFinishedTournament(userData);
+    if (tournament) {
+      // Navigate to the test tournament to see winners banner
+      navigation.navigate('TournamentDetails', {
+        tournamentId: tournament.id,
+      });
+    }
+  };
+
   return (
     <View style={styles.container}>
       <MobileHeader
@@ -58,26 +70,12 @@ export default function CompeteScreen({ navigation }) {
             headline="No tournaments yet"
             body="Create your first tournament or join one from friends"
             button={
-              <View style={styles.buttonGroup}>
-                <Button
-                  title="Create tournament"
-                  onPress={handleCreateTournament}
-                  variant="primary"
-                  fullWidth={false}
-                />
-                <Button
-                  title="Test V2 Modal"
-                  onPress={() => setShowV2Modal(true)}
-                  variant="secondary"
-                  fullWidth={false}
-                />
-                <Button
-                  title="Test V3 Modal"
-                  onPress={() => setShowV3Modal(true)}
-                  variant="secondary"
-                  fullWidth={false}
-                />
-              </View>
+              <Button
+                title="Create tournament"
+                onPress={handleCreateTournament}
+                variant="primary"
+                fullWidth={false}
+              />
             }
           />
         </View>
@@ -87,14 +85,17 @@ export default function CompeteScreen({ navigation }) {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + Spacing.space4 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.sectionTitle}>Ongoing tournaments</Text>
-          {tournaments.map((tournament) => {
+          {tournaments.map((tournament, index) => {
             const isHost = userData && tournament.hostId === userData.uid;
             // Check if user is in any of the teams
             const userJoined = tournament.teams?.some(team =>
               team.player1?.userId === userData?.uid ||
               team.player2?.userId === userData?.uid
             ) || false;
+
+            // Only animate first 8 cards
+            const shouldAnimate = index < 8;
+            const animationIndex = shouldAnimate ? index : null;
 
             // Extract avatars from teams (max 4 players)
             const avatars = [];
@@ -146,9 +147,21 @@ export default function CompeteScreen({ navigation }) {
                 isHost={isHost}
                 userJoined={userJoined}
                 hostId={tournament.hostId}
+                animationIndex={animationIndex}
               />
             );
           })}
+
+          {/* TEST BUTTON - Remove this after testing */}
+          <View style={styles.testButtonContainer}>
+            <Text style={styles.testLabel}>🧪 Test Winners Banner:</Text>
+            <Button
+              title="Create Test Finished Tournament"
+              onPress={handleCreateTestTournament}
+              variant="accent"
+              fullWidth={true}
+            />
+          </View>
         </ScrollView>
       )}
     </View>
@@ -169,14 +182,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.space4,
   },
-  sectionTitle: {
+  testButtonContainer: {
+    marginTop: Spacing.space6,
+    padding: Spacing.space4,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: Colors.accent300,
+    borderStyle: 'dashed',
+  },
+  testLabel: {
     fontFamily: 'GeneralSans-Semibold',
     fontSize: Typography.body200,
     color: Colors.primary300,
-    marginBottom: Spacing.space2,
-  },
-  buttonGroup: {
-    gap: Spacing.space2,
-    alignItems: 'center',
+    marginBottom: Spacing.space3,
+    textAlign: 'center',
   },
 });
