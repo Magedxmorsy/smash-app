@@ -9,10 +9,14 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "eas:login": "eas login",
+    "eas:build:android": "eas build --profile preview --platform android",
+    "eas:build:ios": "eas build --profile preview --platform ios",
+    "eas:build:android:prod": "eas build --profile production --platform android",
+    "eas:build:ios:prod": "eas build --profile production --platform ios"
   },
   "dependencies": {
-    "@dataconnect/generated": "file:src/dataconnect-generated",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-picker/picker": "2.11.1",
@@ -44,6 +48,7 @@
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "babel-preset-expo": "^54.0.7",
+    "eas-cli": "^16.28.0",
     "jest": "^30.2.0",
     "jest-expo": "^54.0.16"
   },
