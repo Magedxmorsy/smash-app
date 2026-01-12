@@ -16,7 +16,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.magedamorsy.smash",
-      "associatedDomains": ["applinks:smash.app", "applinks:www.smash.app"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -27,26 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.magedamorsy.smash",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "smash.app",
-              "pathPrefix": "/tournament"
-            },
-            {
-              "scheme": "https",
-              "host": "www.smash.app",
-              "pathPrefix": "/tournament"
-            }
-          ],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
+      "package": "com.magedamorsy.smash"
     },
     "web": {
       "favicon": "./assets/favicon.png"
