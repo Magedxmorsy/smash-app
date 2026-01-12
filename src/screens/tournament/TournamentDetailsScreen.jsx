@@ -107,12 +107,34 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
   const handleShare = async () => {
     try {
-      await Share.share({
-        message: `Join my tournament "${tournament.name}" on Smash! 🎾`,
-        title: 'Join my tournament',
+      // Generate deep link for this tournament
+      const tournamentLink = `https://smash.app/tournament/${tournament.id}`;
+      const universalLink = `smash://tournament/${tournament.id}`;
+
+      // Create share message with tournament details
+      const shareMessage = Platform.select({
+        ios: `Join my tournament "${tournament.name}" on Smash! 🎾\n\n📍 ${tournament.location || 'Location TBD'}\n📅 ${tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'Date TBD'}\n\nTap to join: ${tournamentLink}`,
+        android: `Join my tournament "${tournament.name}" on Smash! 🎾\n\n📍 ${tournament.location || 'Location TBD'}\n📅 ${tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'Date TBD'}\n\nTap to join: ${tournamentLink}`,
       });
+
+      const result = await Share.share(
+        {
+          message: shareMessage,
+          title: `Join ${tournament.name}`,
+          url: Platform.OS === 'ios' ? tournamentLink : undefined,
+        },
+        {
+          subject: `Join ${tournament.name} on Smash`,
+          dialogTitle: 'Share tournament',
+        }
+      );
+
+      if (result.action === Share.sharedAction) {
+        console.log('Tournament shared successfully');
+      }
     } catch (error) {
       console.error('Error sharing:', error);
+      Alert.alert('Share Failed', 'Could not share tournament. Please try again.');
     }
   };
 
