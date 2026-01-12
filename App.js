@@ -219,6 +219,19 @@ function MainApp() {
     setShowLoginModal(true);
   };
 
+  const handleCreateTournament = (callback) => {
+    if (!isAuthenticated) {
+      // User is not authenticated, show login modal and store the callback
+      setPendingAction({ type: 'createTournament', callback });
+      setShowLoginModal(true);
+    } else {
+      // User is authenticated, execute callback directly
+      if (callback) {
+        callback();
+      }
+    }
+  };
+
   const handleEmailSubmit = async (email, isNewUser) => {
     if (isNewUser) {
       // Create user account and send verification code
@@ -306,6 +319,7 @@ function MainApp() {
       <NavigationContainer linking={linking}>
         <TabNavigator
           onCreateAccount={handleCreateAccount}
+          onCreateTournament={handleCreateTournament}
         />
         <StatusBar style="dark" />
       </NavigationContainer>

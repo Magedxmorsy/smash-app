@@ -139,79 +139,10 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
     navigation.navigate('MatchDetails', { match: serializableMatch });
   };
 
-  // Demo match data for next match (future)
-  const nextMatch = {
-    leftTeam: {
-      player1: {
-        firstName: 'Ahmed',
-        lastName: 'Basyouni',
-        avatarSource: require('../../../assets/avatars/ahmed.jpg'),
-      },
-      player2: {
-        firstName: 'Leo',
-        lastName: 'Miguele',
-        avatarSource: require('../../../assets/avatars/leo.jpg'),
-      },
-    },
-    rightTeam: {
-      player1: {
-        firstName: 'Omar',
-        lastName: 'Ibrahim',
-        avatarSource: require('../../../assets/avatars/omar.jpg'),
-      },
-      player2: {
-        firstName: 'Karim',
-        lastName: 'Omar',
-        avatarSource: require('../../../assets/avatars/karim.jpg'),
-      },
-    },
-    tournamentName: 'Amsterdam Spring Championship',
-    status: 'GROUP STAGE',
-    dateTime: new Date('2025-12-15T16:00:00'),
-    location: 'Padeldam Amsterdam',
-    address: 'Tom Schreursweg 16, 1067 MC Amsterdam, Netherlands',
-    court: '5',
-    rules: 'Best of 3 sets. Each set is played to 6 games with a 2-game advantage required.',
-    isPast: false,
-  };
-
-  // Demo match data for last match (past)
-  const [lastMatch, setLastMatch] = useState({
-    leftTeam: {
-      player1: {
-        firstName: user?.firstName || 'Maged',
-        lastName: user?.lastName || 'Morsy',
-        avatarSource: user?.profilePicture ? { uri: user.profilePicture } : null,
-        id: user?.uid,
-      },
-      player2: {
-        firstName: 'Leo',
-        lastName: 'Miguele',
-        avatarSource: require('../../../assets/avatars/leo.jpg'),
-      },
-    },
-    rightTeam: {
-      player1: {
-        firstName: 'Omar',
-        lastName: 'Ibrahim',
-        avatarSource: require('../../../assets/avatars/omar.jpg'),
-      },
-      player2: {
-        firstName: 'Karim',
-        lastName: 'Omar',
-        avatarSource: require('../../../assets/avatars/karim.jpg'),
-      },
-    },
-    tournamentName: 'Rotterdam Winter Cup',
-    status: 'QUARTER FINALS',
-    dateTime: new Date('2025-11-28T14:00:00'),
-    location: 'PadelPoints Rotterdam',
-    address: 'Sportlaan 50, 3071 AG Rotterdam, Netherlands',
-    court: '3',
-    rules: 'Best of 3 sets. Each set is played to 6 games with a 2-game advantage required.',
-    isPast: true,
-    scoreRecorded: false, // Score not yet recorded
-  });
+  // TODO: Fetch real match data from Firestore
+  // For now, no dummy data shown in production
+  const nextMatch = null;
+  const [lastMatch, setLastMatch] = useState(null);
 
   return (
     <View style={styles.container}>
@@ -226,48 +157,70 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + Spacing.space4 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Next Match Section */}
-        <UpcomingMatchWrapper>
-          <MatchCard
-            variant="before"
-            leftTeam={nextMatch.leftTeam}
-            rightTeam={nextMatch.rightTeam}
-            tournamentName={nextMatch.tournamentName}
-            status={nextMatch.status}
-            dateTime={nextMatch.dateTime}
-            location={nextMatch.location}
-            court={nextMatch.court}
-            isPast={nextMatch.isPast}
-            highlightBorder={true}
-            onAddToCalendar={handleAddToCalendar}
-            onPress={() => handleMatchPress(nextMatch)}
-            animationIndex={0}
+        {!nextMatch && !lastMatch ? (
+          <EmptyState
+            imageSource={require('../../../assets/empty-state-tournament.png')}
+            headline="No matches yet"
+            body="Join or create a tournament to start playing matches"
+            button={
+              <Button
+                title="Create tournament"
+                onPress={handleCreateTournament}
+                variant="primary"
+                fullWidth={false}
+              />
+            }
           />
-        </UpcomingMatchWrapper>
+        ) : (
+          <>
+            {/* Next Match Section */}
+            {nextMatch && (
+              <UpcomingMatchWrapper>
+                <MatchCard
+                  variant="before"
+                  leftTeam={nextMatch.leftTeam}
+                  rightTeam={nextMatch.rightTeam}
+                  tournamentName={nextMatch.tournamentName}
+                  status={nextMatch.status}
+                  dateTime={nextMatch.dateTime}
+                  location={nextMatch.location}
+                  court={nextMatch.court}
+                  isPast={nextMatch.isPast}
+                  highlightBorder={true}
+                  onAddToCalendar={handleAddToCalendar}
+                  onPress={() => handleMatchPress(nextMatch)}
+                  animationIndex={0}
+                />
+              </UpcomingMatchWrapper>
+            )}
 
-        {/* Last Match Section */}
-        <Animated.View
-          style={{
-            transform: [{ translateY: lastMatchSlideAnim }],
-          }}
-        >
-          <Text style={[styles.sectionTitle, styles.lastMatchTitle]}>Your last match</Text>
-          <MatchCard
-            variant="after"
-            leftTeam={lastMatch.leftTeam}
-            rightTeam={lastMatch.rightTeam}
-            tournamentName={lastMatch.tournamentName}
-            status={lastMatch.status}
-            dateTime={lastMatch.dateTime}
-            location={lastMatch.location}
-            isPast={lastMatch.isPast}
-            score={lastMatch.score}
-            scoreRecorded={lastMatch.scoreRecorded}
-            onAddScore={handleAddScore}
-            onPress={() => handleMatchPress(lastMatch)}
-            animationIndex={null}
-          />
-        </Animated.View>
+            {/* Last Match Section */}
+            {lastMatch && (
+              <Animated.View
+                style={{
+                  transform: [{ translateY: lastMatchSlideAnim }],
+                }}
+              >
+                <Text style={[styles.sectionTitle, styles.lastMatchTitle]}>Your last match</Text>
+                <MatchCard
+                  variant="after"
+                  leftTeam={lastMatch.leftTeam}
+                  rightTeam={lastMatch.rightTeam}
+                  tournamentName={lastMatch.tournamentName}
+                  status={lastMatch.status}
+                  dateTime={lastMatch.dateTime}
+                  location={lastMatch.location}
+                  isPast={lastMatch.isPast}
+                  score={lastMatch.score}
+                  scoreRecorded={lastMatch.scoreRecorded}
+                  onAddScore={handleAddScore}
+                  onPress={() => handleMatchPress(lastMatch)}
+                  animationIndex={null}
+                />
+              </Animated.View>
+            )}
+          </>
+        )}
       </ScrollView>
 
       <CreateTournamentModal
