@@ -154,7 +154,11 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + Spacing.space4 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 60 + Spacing.space4 },
+          !nextMatch && !lastMatch && styles.emptyStateContainer
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {!nextMatch && !lastMatch ? (
@@ -265,6 +269,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.space4,
+  },
+  emptyStateContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
     fontFamily: 'GeneralSans-Semibold',
