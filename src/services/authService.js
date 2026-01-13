@@ -126,6 +126,21 @@ export const createUserWithVerificationCode = async (email) => {
 
             return { success: true, user: null, uid, verificationCode, error: null };
           }
+        } else {
+          // Edge case: Auth user exists but no Firestore document
+          // This means the Firestore document was deleted but Auth user remains (orphaned account)
+          console.warn('⚠️ Orphaned Firebase Auth user detected (no Firestore document)');
+          console.warn('⚠️ Email:', email);
+          console.warn('⚠️ This is an incomplete signup - Firestore document was deleted');
+
+          // Return a specific error asking user to contact support or try different email
+          return {
+            success: false,
+            user: null,
+            uid: null,
+            verificationCode: null,
+            error: 'This email has an incomplete account. Please delete the user from Firebase Authentication Console or try a different email.'
+          };
         }
 
         // Account exists and is complete, user should log in instead
@@ -176,9 +191,10 @@ export const logOut = async () => {
 export const resetPassword = async (email) => {
   try {
     await sendPasswordResetEmail(auth, email);
-    return { error: null };
+    return { success: true, error: null };
   } catch (error) {
-    return { error: error.message };
+    console.error('Reset password error:', error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -260,33 +276,52 @@ export const verifyEmailCode = async (uid, code) => {
  */
 export const checkEmailExists = async (email) => {
   try {
-    console.log('📧 Checking if email exists:', email);
+    console.log('📧 [checkEmailExists] Starting check for email:', email);
+    console.log('📧 [checkEmailExists] Firestore DB instance:', !!db);
 
     // Check Firestore directly (most reliable method)
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email));
+
+    console.log('📧 [checkEmailExists] Query created, fetching docs...');
     const querySnapshot = await getDocs(q);
 
-    console.log('📊 Firestore query result:', {
+    console.log('📊 [checkEmailExists] Firestore query result:', {
       found: !querySnapshot.empty,
-      count: querySnapshot.size
+      count: querySnapshot.size,
+      timestamp: new Date().toISOString()
     });
 
     if (!querySnapshot.empty) {
+      const docIds = querySnapshot.docs.map(doc => doc.id);
       const userData = querySnapshot.docs[0].data();
-      console.log('👤 User found in Firestore:', {
+      console.log('👤 [checkEmailExists] User(s) found in Firestore:', {
+        documentIds: docIds,
         email: userData.email,
         hasPassword: !!userData.passwordSet,
-        emailVerified: !!userData.emailVerified
+        emailVerified: !!userData.emailVerified,
+        allDocs: querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email }))
       });
+
+      // Check if this is an incomplete signup (no password and not verified)
+      // Treat incomplete signups as non-existent so user can retry
+      if (!userData.passwordSet && !userData.emailVerified) {
+        console.log('⚠️ [checkEmailExists] Found incomplete signup - treating as non-existent');
+        return { exists: false, error: null, incomplete: true, uid: userData.uid };
+      }
 
       return { exists: true, error: null };
     }
 
-    console.log('❌ No user found in Firestore for email:', email);
+    console.log('✅ [checkEmailExists] No user found in Firestore for email:', email);
     return { exists: false, error: null };
   } catch (error) {
-    console.error('❌ Check email error:', error);
+    console.error('❌ [checkEmailExists] Error:', error);
+    console.error('❌ [checkEmailExists] Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     return { exists: false, error: error.message };
   }
 };

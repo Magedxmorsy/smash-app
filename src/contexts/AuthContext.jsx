@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (authUser) => {
@@ -23,6 +24,27 @@ export const AuthProvider = ({ children }) => {
         // Fetch user data from Firestore
         const { success, data } = await getUserData(authUser.uid);
         if (success) {
+          // Check if this is an incomplete signup (no password set and not verified)
+          // BUT only log out if we're NOT actively in the signup process
+          if (data && !data.passwordSet && !data.emailVerified && !isSigningUp) {
+            console.warn('⚠️ Incomplete signup detected for user:', authUser.email);
+            console.warn('⚠️ User data:', {
+              email: data.email,
+              passwordSet: data.passwordSet,
+              emailVerified: data.emailVerified,
+              displayName: data.displayName
+            });
+
+            // Log out the incomplete account to force re-authentication
+            // This prevents the app from showing an incomplete profile
+            console.log('🔄 Logging out incomplete account...');
+            await logOut();
+            setUser(null);
+            setUserData(null);
+            setLoading(false);
+            return;
+          }
+
           setUserData(data);
         }
       } else {
@@ -33,7 +55,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [isSigningUp]);
 
   const handleSignUp = async (email, password, displayName) => {
     const result = await signUp(email, password, displayName);
@@ -108,6 +130,7 @@ export const AuthProvider = ({ children }) => {
     refreshUserData,
     updateUserData,
     isAuthenticated: !!user,
+    setIsSigningUp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

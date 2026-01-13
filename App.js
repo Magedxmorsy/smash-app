@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import SignUpScreen from './src/screens/auth/SignUpScreen';
+import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import EmailVerificationScreen from './src/screens/auth/EmailVerificationScreen';
 import CreatePasswordScreen from './src/screens/auth/CreatePasswordScreen';
 import ProfileSetupScreen from './src/screens/auth/ProfileSetupScreen';
@@ -56,7 +57,7 @@ function MainApp() {
   const [authScreen, setAuthScreen] = useState('login'); // 'login', 'signup', 'verification', 'createPassword', or 'profileSetup'
   const [pendingVerification, setPendingVerification] = useState(null);
   const [pendingAction, setPendingAction] = useState(null); // Store action to perform after auth
-  const { isAuthenticated, loading, refreshUserData } = useAuth();
+  const { isAuthenticated, loading, refreshUserData, setIsSigningUp } = useAuth();
   const wasAuthenticatedRef = useRef(false);
 
   useEffect(() => {
@@ -192,6 +193,9 @@ function MainApp() {
       // Refresh user data to get the updated profile information
       await refreshUserData();
 
+      // Reset signup flag - signup is now complete
+      setIsSigningUp(false);
+
       // Close modal and let pending action execute
       setPendingVerification(null);
       setAuthScreen('login');
@@ -212,11 +216,17 @@ function MainApp() {
     // Reset to login screen and clear any pending data
     setAuthScreen('login');
     setPendingVerification(null);
+    // Reset signup flag when modal closes
+    setIsSigningUp(false);
   };
 
   const handleCreateAccount = () => {
     setPendingAction({ type: 'createAccount', callback: null });
     setShowLoginModal(true);
+  };
+
+  const handleForgotPassword = () => {
+    setAuthScreen('forgotPassword');
   };
 
   const handleCreateTournament = (callback) => {
@@ -234,6 +244,9 @@ function MainApp() {
 
   const handleEmailSubmit = async (email, isNewUser) => {
     if (isNewUser) {
+      // Set flag to prevent auto-logout during signup
+      setIsSigningUp(true);
+
       // Create user account and send verification code
       const { success, uid, error } = await createUserWithVerificationCode(email);
 
@@ -243,6 +256,8 @@ function MainApp() {
         setAuthScreen('verification');
       } else {
         Alert.alert('Error', error || 'Failed to create account');
+        // Reset flag if failed
+        setIsSigningUp(false);
       }
     } else {
       // Show password field for existing users (handled within LoginScreen)
@@ -258,6 +273,7 @@ function MainApp() {
             onNavigateToSignUp={() => setAuthScreen('signup')}
             onClose={handleModalClose}
             onEmailSubmit={handleEmailSubmit}
+            onForgotPassword={handleForgotPassword}
           />
         );
       case 'signup':
@@ -266,6 +282,13 @@ function MainApp() {
             onNavigateToLogin={() => setAuthScreen('login')}
             onClose={handleModalClose}
             onEmailSubmit={handleEmailSubmit}
+          />
+        );
+      case 'forgotPassword':
+        return (
+          <ForgotPasswordScreen
+            onBack={() => setAuthScreen('login')}
+            onClose={handleModalClose}
           />
         );
       case 'verification':
@@ -296,6 +319,7 @@ function MainApp() {
           <LoginScreen
             onNavigateToSignUp={() => setAuthScreen('signup')}
             onClose={handleModalClose}
+            onForgotPassword={handleForgotPassword}
           />
         );
     }

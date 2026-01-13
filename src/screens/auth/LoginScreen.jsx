@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { checkEmailExists } from '../../services/authService';
 import CloseDarkIcon from '../../../assets/icons/closedark.svg';
 
-export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit }) {
+export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit, onForgotPassword }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -154,8 +154,8 @@ export default function LoginScreen({ onNavigateToSignUp, onClose, onEmailSubmit
                 <View style={styles.passwordContainer}>
                   <View style={styles.passwordHeader}>
                     <Text style={styles.passwordLabel}>Password</Text>
-                    <TouchableOpacity>
-                      <Text style={styles.resetPassword}>Reset password</Text>
+                    <TouchableOpacity onPress={onForgotPassword}>
+                      <Text style={styles.resetPassword}>Forgot password?</Text>
                     </TouchableOpacity>
                   </View>
                   <Input

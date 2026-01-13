@@ -133,7 +133,7 @@ export default function ChangePasswordScreen({ navigation }) {
 
               <View style={styles.forgotPasswordContainer}>
                 <LinkButton
-                  title="Forgot your password?"
+                  title="Forgot password?"
                   variant="primary"
                   spacing={0}
                   onPress={handleForgotPassword}
