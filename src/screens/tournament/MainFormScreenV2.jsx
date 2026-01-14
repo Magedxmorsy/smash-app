@@ -324,30 +324,25 @@ export default function MainFormScreenV2({
         </>
 
         <>
-          <ListItem
-            icon={<TeamIcon width={24} height={24} />}
-            placeholder="Add number of teams"
-            value={formatTeamCount(teamCount)}
-            onPress={() => {
-              if (isTournamentStarted) return;
-              Keyboard.dismiss();
-              setShowTeamPicker(!showTeamPicker);
-            }}
-            disabled={isTournamentStarted}
-            error={errors.teamCount}
-          />
-
-          {showTeamPicker && Platform.OS === 'ios' && (
-            <View style={styles.pickerContainer}>
+          {Platform.OS === 'android' ? (
+            // Android: Render picker directly in the layout (dropdown style)
+            <View style={styles.androidPickerWrapper}>
+              <View style={styles.androidPickerIconContainer}>
+                <TeamIcon width={24} height={24} />
+              </View>
               <Picker
-                selectedValue={teamCount || 8}
+                selectedValue={teamCount}
                 onValueChange={(itemValue) => {
-                  setTeamCount(itemValue);
-                  if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+                  if (itemValue !== null) {
+                    setTeamCount(itemValue);
+                    if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+                  }
                 }}
-                style={styles.picker}
-                itemStyle={styles.pickerItem}
+                style={styles.androidPickerInline}
+                enabled={!isTournamentStarted}
+                dropdownIconColor={Colors.primary300}
               >
+                <Picker.Item label="Add number of teams" value={null} color={Colors.neutral400} />
                 {teamOptions.map((count) => (
                   <Picker.Item
                     key={count}
@@ -358,6 +353,48 @@ export default function MainFormScreenV2({
                 ))}
               </Picker>
             </View>
+          ) : (
+            // iOS: Use ListItem with modal picker
+            <>
+              <ListItem
+                icon={<TeamIcon width={24} height={24} />}
+                placeholder="Add number of teams"
+                value={formatTeamCount(teamCount)}
+                onPress={() => {
+                  if (isTournamentStarted) return;
+                  Keyboard.dismiss();
+                  setShowTeamPicker(!showTeamPicker);
+                }}
+                disabled={isTournamentStarted}
+                error={errors.teamCount}
+              />
+
+              {showTeamPicker && (
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={teamCount || 8}
+                    onValueChange={(itemValue) => {
+                      setTeamCount(itemValue);
+                      if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+                    }}
+                    style={styles.picker}
+                    itemStyle={styles.pickerItem}
+                  >
+                    {teamOptions.map((count) => (
+                      <Picker.Item
+                        key={count}
+                        label={`${count} teams`}
+                        value={count}
+                        color={Colors.primary300}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              )}
+            </>
+          )}
+          {Platform.OS === 'android' && errors.teamCount && (
+            <Text style={styles.androidPickerError}>{errors.teamCount}</Text>
           )}
         </>
       </CardGroup>
@@ -420,30 +457,6 @@ export default function MainFormScreenV2({
           onChange={handleTimeChange}
         />
       )}
-
-      {/* Team Count Picker Modal - Android shows immediately when pressing */}
-      {Platform.OS === 'android' && showTeamPicker && (
-        <View style={styles.androidPickerModal}>
-          <Picker
-            selectedValue={teamCount || 8}
-            onValueChange={(itemValue) => {
-              setTeamCount(itemValue);
-              setShowTeamPicker(false);
-              if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
-            }}
-            style={styles.androidPicker}
-          >
-            {teamOptions.map((count) => (
-              <Picker.Item
-                key={count}
-                label={`${count} teams`}
-                value={count}
-                color={Colors.primary300}
-              />
-            ))}
-          </Picker>
-        </View>
-      )}
     </ScrollView>
   );
 }
@@ -505,18 +518,29 @@ const styles = StyleSheet.create({
     fontFamily: 'GeneralSans-Semibold',
     color: Colors.primary300,
   },
-  androidPickerModal: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    elevation: 20,
+  androidPickerWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: Spacing.space2,
+    paddingLeft: Spacing.space4,
+    paddingRight: Spacing.space2,
+    minHeight: 56,
   },
-  androidPicker: {
-    width: '100%',
+  androidPickerIconContainer: {
+    marginRight: Spacing.space3,
+  },
+  androidPickerInline: {
+    flex: 1,
     color: Colors.primary300,
+    fontFamily: 'GeneralSans-Medium',
+  },
+  androidPickerError: {
+    fontFamily: 'GeneralSans-Regular',
+    fontSize: Typography.body300,
+    color: Colors.error,
+    marginTop: Spacing.space1,
+    marginLeft: Spacing.space4,
   },
 });
