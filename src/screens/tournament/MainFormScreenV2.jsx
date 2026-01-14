@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, Alert, Switch, Keyboard, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, Alert, Switch, Keyboard, ScrollView, Modal, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Input from '../../components/ui/Input';
@@ -324,25 +324,31 @@ export default function MainFormScreenV2({
         </>
 
         <>
-          {Platform.OS === 'android' ? (
-            // Android: Render picker directly in the layout (dropdown style)
-            <View style={styles.androidPickerWrapper}>
-              <View style={styles.androidPickerIconContainer}>
-                <TeamIcon width={24} height={24} />
-              </View>
+          <ListItem
+            icon={<TeamIcon width={24} height={24} />}
+            placeholder="Add number of teams"
+            value={formatTeamCount(teamCount)}
+            onPress={() => {
+              if (isTournamentStarted) return;
+              Keyboard.dismiss();
+              setShowTeamPicker(true);
+            }}
+            disabled={isTournamentStarted}
+            error={errors.teamCount}
+          />
+
+          {/* iOS: Inline picker */}
+          {showTeamPicker && Platform.OS === 'ios' && (
+            <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={teamCount}
+                selectedValue={teamCount || 8}
                 onValueChange={(itemValue) => {
-                  if (itemValue !== null) {
-                    setTeamCount(itemValue);
-                    if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
-                  }
+                  setTeamCount(itemValue);
+                  if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
                 }}
-                style={styles.androidPickerInline}
-                enabled={!isTournamentStarted}
-                dropdownIconColor={Colors.primary300}
+                style={styles.picker}
+                itemStyle={styles.pickerItem}
               >
-                <Picker.Item label="Add number of teams" value={null} color={Colors.neutral400} />
                 {teamOptions.map((count) => (
                   <Picker.Item
                     key={count}
@@ -353,32 +359,35 @@ export default function MainFormScreenV2({
                 ))}
               </Picker>
             </View>
-          ) : (
-            // iOS: Use ListItem with modal picker
-            <>
-              <ListItem
-                icon={<TeamIcon width={24} height={24} />}
-                placeholder="Add number of teams"
-                value={formatTeamCount(teamCount)}
-                onPress={() => {
-                  if (isTournamentStarted) return;
-                  Keyboard.dismiss();
-                  setShowTeamPicker(!showTeamPicker);
-                }}
-                disabled={isTournamentStarted}
-                error={errors.teamCount}
-              />
+          )}
 
-              {showTeamPicker && (
-                <View style={styles.pickerContainer}>
+          {/* Android: Modal picker */}
+          {Platform.OS === 'android' && (
+            <Modal
+              visible={showTeamPicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowTeamPicker(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setShowTeamPicker(false)}
+              >
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Select number of teams</Text>
+                    <TouchableOpacity onPress={() => setShowTeamPicker(false)}>
+                      <Text style={styles.modalDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
                   <Picker
                     selectedValue={teamCount || 8}
                     onValueChange={(itemValue) => {
                       setTeamCount(itemValue);
                       if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
                     }}
-                    style={styles.picker}
-                    itemStyle={styles.pickerItem}
+                    style={styles.androidPickerModal}
                   >
                     {teamOptions.map((count) => (
                       <Picker.Item
@@ -390,11 +399,8 @@ export default function MainFormScreenV2({
                     ))}
                   </Picker>
                 </View>
-              )}
-            </>
-          )}
-          {Platform.OS === 'android' && errors.teamCount && (
-            <Text style={styles.androidPickerError}>{errors.teamCount}</Text>
+              </TouchableOpacity>
+            </Modal>
           )}
         </>
       </CardGroup>
@@ -518,29 +524,38 @@ const styles = StyleSheet.create({
     fontFamily: 'GeneralSans-Semibold',
     color: Colors.primary300,
   },
-  androidPickerWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingVertical: Spacing.space2,
-    paddingLeft: Spacing.space4,
-    paddingRight: Spacing.space2,
-    minHeight: 56,
-  },
-  androidPickerIconContainer: {
-    marginRight: Spacing.space3,
-  },
-  androidPickerInline: {
+  modalOverlay: {
     flex: 1,
-    color: Colors.primary300,
-    fontFamily: 'GeneralSans-Medium',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  androidPickerError: {
-    fontFamily: 'GeneralSans-Regular',
-    fontSize: Typography.body300,
-    color: Colors.error,
-    marginTop: Spacing.space1,
-    marginLeft: Spacing.space4,
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Spacing.space8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.space4,
+    paddingVertical: Spacing.space4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body100,
+    color: Colors.primary300,
+  },
+  modalDone: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body200,
+    color: Colors.accent300,
+  },
+  androidPickerModal: {
+    width: '100%',
+    color: Colors.primary300,
   },
 });
