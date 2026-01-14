@@ -229,6 +229,8 @@ export default function MainFormScreenV2({
 
   const teamOptions = [6, 8, 10, 12, 16, 20, 24, 32];
 
+  console.log('🔧 MainFormScreenV2 render - showTeamPicker:', showTeamPicker, 'Platform:', Platform.OS);
+
   return (
     <ScrollView
       style={styles.scrollView}
@@ -329,9 +331,13 @@ export default function MainFormScreenV2({
             placeholder="Add number of teams"
             value={formatTeamCount(teamCount)}
             onPress={() => {
+              console.log('🔧 Team picker pressed!');
+              console.log('🔧 isTournamentStarted:', isTournamentStarted);
+              console.log('🔧 Platform:', Platform.OS);
               if (isTournamentStarted) return;
               Keyboard.dismiss();
               setShowTeamPicker(true);
+              console.log('🔧 setShowTeamPicker(true) called');
             }}
             disabled={isTournamentStarted}
             error={errors.teamCount}
@@ -367,7 +373,10 @@ export default function MainFormScreenV2({
               visible={showTeamPicker}
               transparent={true}
               animationType="slide"
-              onRequestClose={() => setShowTeamPicker(false)}
+              onRequestClose={() => {
+                console.log('🔧 Modal onRequestClose called');
+                setShowTeamPicker(false);
+              }}
             >
               <View style={styles.modalOverlay}>
                 <TouchableOpacity

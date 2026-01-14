@@ -16,24 +16,41 @@ export default function ProfileSetupScreen({ onProfileComplete, onBack }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const pickImage = async () => {
-    // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      console.log('📸 [ProfileSetup] pickImage called');
 
-    if (status !== 'granted') {
-      alert('Sorry, we need camera roll permissions to select a photo.');
-      return;
-    }
+      // Request permission
+      console.log('📸 [ProfileSetup] Requesting media library permissions...');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('📸 [ProfileSetup] Permission status:', status);
 
-    // Launch image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to select a photo.');
+        return;
+      }
 
-    if (!result.canceled && result.assets[0]) {
-      setAvatarUri(result.assets[0].uri);
+      // Launch image picker
+      console.log('📸 [ProfileSetup] Launching image picker...');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images || 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      console.log('📸 [ProfileSetup] Image picker result:', {
+        canceled: result.canceled,
+        hasAssets: !!result.assets,
+        assetsLength: result.assets?.length
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('📸 [ProfileSetup] Setting avatar URI:', result.assets[0].uri);
+        setAvatarUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('📸 [ProfileSetup] Error picking image:', error);
+      alert('Failed to pick image: ' + error.message);
     }
   };
 
@@ -59,12 +76,16 @@ export default function ProfileSetupScreen({ onProfileComplete, onBack }) {
 
   return (
     <View style={styles.container}>
-      {/* Swipe Indicator */}
+      {/* Fixed Swipe Indicator */}
       <View style={styles.swipeIndicator} />
 
       {/* Back Button */}
       {onBack && (
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onBack}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <ChevronLeftIcon width={24} height={24} color={Colors.primary300} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
@@ -75,7 +96,6 @@ export default function ProfileSetupScreen({ onProfileComplete, onBack }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -166,17 +186,20 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: Colors.neutral300,
     borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: Spacing.space2,
+    position: 'absolute',
+    top: 12,
+    left: '50%',
+    marginLeft: -20,
+    zIndex: 20,
   },
   backButton: {
+    position: 'absolute',
+    top: 24,
+    left: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: Spacing.space4,
-    paddingBottom: Spacing.space2,
     gap: 8,
+    zIndex: 20,
   },
   backText: {
     fontFamily: 'GeneralSans-Semibold',
@@ -186,12 +209,10 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Spacing.space3,
+    paddingTop: 72, // 56px (back button height) + 16px spacing
     paddingBottom: Spacing.space4,
   },
   header: {

@@ -24,26 +24,11 @@ export const AuthProvider = ({ children }) => {
         // Fetch user data from Firestore
         const { success, data } = await getUserData(authUser.uid);
         if (success) {
-          // Check if this is an incomplete signup (no password set and not verified)
-          // BUT only log out if we're NOT actively in the signup process
-          if (data && !data.passwordSet && !data.emailVerified && !isSigningUp) {
-            console.warn('⚠️ Incomplete signup detected for user:', authUser.email);
-            console.warn('⚠️ User data:', {
-              email: data.email,
-              passwordSet: data.passwordSet,
-              emailVerified: data.emailVerified,
-              displayName: data.displayName
-            });
-
-            // Log out the incomplete account to force re-authentication
-            // This prevents the app from showing an incomplete profile
-            console.log('🔄 Logging out incomplete account...');
-            await logOut();
-            setUser(null);
-            setUserData(null);
-            setLoading(false);
-            return;
-          }
+          // NOTE: Removed the "incomplete signup" check that was logging users out
+          // If a user can successfully login with Firebase Auth, their account is valid
+          // We no longer need to check passwordSet or profileComplete flags
+          // Users who haven't verified their email can still login, but will be prompted
+          // to verify their email when trying to perform certain actions (like creating tournaments)
 
           setUserData(data);
         }
@@ -130,6 +115,7 @@ export const AuthProvider = ({ children }) => {
     refreshUserData,
     updateUserData,
     isAuthenticated: !!user,
+    isEmailVerified: user?.emailVerified || false,
     setIsSigningUp,
   };
 

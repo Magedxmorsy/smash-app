@@ -12,7 +12,7 @@ import { Colors } from '../constants/Colors';
 
 const Tab = createBottomTabNavigator();
 
-export default function TabNavigator({ onCreateAccount, onCreateTournament }) {
+export default function TabNavigator({ onCreateAccount, onCreateTournament, onEmailVerificationRequired }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Tab.Navigator
@@ -22,12 +22,14 @@ export default function TabNavigator({ onCreateAccount, onCreateTournament }) {
         }}
       >
       <Tab.Screen name="HomeTab">
-        {(props) => <HomeStack {...props} onCreateTournament={onCreateTournament} />}
+        {(props) => <HomeStack {...props} onCreateTournament={onCreateTournament} onEmailVerificationRequired={onEmailVerificationRequired} />}
       </Tab.Screen>
-      <Tab.Screen name="CompeteTab" component={CompeteStack} />
+      <Tab.Screen name="CompeteTab">
+        {(props) => <CompeteStack {...props} onCreateTournament={onCreateTournament} onEmailVerificationRequired={onEmailVerificationRequired} />}
+      </Tab.Screen>
       <Tab.Screen name="UpdatesTab" component={UpdatesScreen} />
       <Tab.Screen name="ProfileTab">
-        {(props) => <ProfileStack {...props} onCreateAccount={onCreateAccount} />}
+        {(props) => <ProfileStack {...props} onCreateAccount={onCreateAccount} onEmailVerificationRequired={onEmailVerificationRequired} />}
       </Tab.Screen>
     </Tab.Navigator>
     </SafeAreaView>

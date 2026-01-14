@@ -5,7 +5,7 @@ import MatchDetailsScreen from '../screens/match/MatchDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
-export default function HomeStack({ onCreateTournament }) {
+export default function HomeStack({ onCreateTournament, onEmailVerificationRequired }) {
   return (
     <Stack.Navigator
       screenOptions={{

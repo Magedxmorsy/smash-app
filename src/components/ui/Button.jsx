@@ -13,6 +13,7 @@ export default function Button({
   fullWidth = true,
   size = 'large', // 'large' (56px) or 'medium' (48px)
   loading = false,
+  testID,
 }) {
   const handlePress = () => {
     if (!disabled && !loading) {
@@ -71,6 +72,7 @@ export default function Button({
 
   return (
     <TouchableOpacity
+      testID={testID}
       style={[
         styles.button,
         size === 'medium' && styles.buttonMedium,

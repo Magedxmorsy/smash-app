@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, Alert, Switch, Keyboard, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, Alert, Switch, Keyboard, ScrollView, Modal, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -371,9 +371,13 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
             placeholder="Add number of teams"
             value={formatTeamCount(teamCount)}
             onPress={() => {
+              console.log('🔧 Team picker pressed!');
+              console.log('🔧 isTournamentStarted:', isTournamentStarted);
+              console.log('🔧 Platform:', Platform.OS);
               if (isTournamentStarted) return;
               Keyboard.dismiss();
-              setShowTeamPicker(!showTeamPicker);
+              setShowTeamPicker(true);
+              console.log('🔧 setShowTeamPicker(true) called');
             }}
             disabled={isTournamentStarted}
             error={errors.teamCount}
@@ -459,23 +463,53 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
       )}
 
       {/* Team Count Picker Modal (Android only) */}
-      {showTeamPicker && Platform.OS === 'android' && (
-        <Picker
-          selectedValue={teamCount || 8}
-          onValueChange={(itemValue) => {
-            setTeamCount(itemValue);
+      {Platform.OS === 'android' && showTeamPicker && (
+        <Modal
+          visible={showTeamPicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => {
+            console.log('🔧 Modal onRequestClose called');
             setShowTeamPicker(false);
-            if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
           }}
         >
-          {teamOptions.map((count) => (
-            <Picker.Item
-              key={count}
-              label={`${count} teams`}
-              value={count}
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => {
+                console.log('🔧 Backdrop pressed');
+                setShowTeamPicker(false);
+              }}
             />
-          ))}
-        </Picker>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select number of teams</Text>
+                <TouchableOpacity onPress={() => setShowTeamPicker(false)}>
+                  <Text style={styles.modalDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <Picker
+                selectedValue={teamCount || 8}
+                onValueChange={(itemValue) => {
+                  console.log('🔧 Picker value changed:', itemValue);
+                  setTeamCount(itemValue);
+                  if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+                }}
+                style={styles.androidPickerModal}
+              >
+                {teamOptions.map((count) => (
+                  <Picker.Item
+                    key={count}
+                    label={`${count} teams`}
+                    value={count}
+                    color={Colors.primary300}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        </Modal>
       )}
       </ScrollView>
 
@@ -553,5 +587,46 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.space4,
     paddingBottom: Spacing.space4,
     marginTop: -Spacing.space2, // Pull description closer to toggle
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Spacing.space8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.space4,
+    paddingVertical: Spacing.space4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body100,
+    color: Colors.primary300,
+  },
+  modalDone: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body200,
+    color: Colors.accent300,
+  },
+  androidPickerModal: {
+    width: '100%',
+    color: Colors.primary300,
   },
 });

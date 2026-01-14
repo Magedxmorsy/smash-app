@@ -12,6 +12,7 @@ export default function WelcomeScreen({ onGetStarted }) {
       source={require('../../../assets/branding/landingpagebg.jpg')}
       style={styles.container}
       resizeMode="cover"
+      testID="welcome-screen"
     >
       <View style={styles.content}>
         {/* Logo */}
@@ -21,7 +22,7 @@ export default function WelcomeScreen({ onGetStarted }) {
 
         {/* Tagline */}
         <View style={styles.taglineContainer}>
-          <Text style={styles.tagline}>
+          <Text style={styles.tagline} testID="welcome-tagline">
             Create padel tournaments instantly, invite friends and let the app handle the rest
           </Text>
         </View>
@@ -32,6 +33,7 @@ export default function WelcomeScreen({ onGetStarted }) {
             title="Get started"
             onPress={onGetStarted}
             variant="accent"
+            testID="get-started-button"
           />
         </View>
       </View>

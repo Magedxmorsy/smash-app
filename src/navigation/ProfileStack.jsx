@@ -19,7 +19,7 @@ import { Colors } from '../constants/Colors';
 
 const Stack = createNativeStackNavigator();
 
-export default function ProfileStack({ onCreateAccount }) {
+export default function ProfileStack({ onCreateAccount, onEmailVerificationRequired }) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -88,11 +88,12 @@ export default function ProfileStack({ onCreateAccount }) {
       />
       <Stack.Screen
         name="TournamentDetails"
-        component={TournamentDetailsScreen}
         options={{
           animation: 'slide_from_right',
         }}
-      />
+      >
+        {(props) => <TournamentDetailsScreen {...props} onEmailVerificationRequired={onEmailVerificationRequired} />}
+      </Stack.Screen>
       <Stack.Screen
         name="MatchDetails"
         component={MatchDetailsScreen}

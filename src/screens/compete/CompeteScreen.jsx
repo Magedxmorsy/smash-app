@@ -12,7 +12,7 @@ import { Spacing } from '../../constants/Spacing';
 import { Typography } from '../../constants/Typography';
 import { createTestFinishedTournament } from '../../utils/createTestFinishedTournament';
 
-export default function CompeteScreen({ navigation }) {
+export default function CompeteScreen({ navigation, onCreateTournament }) {
   const { tournaments: allTournaments, getOngoingTournaments, getCompletedTournaments } = useTournaments();
   const { userData } = useAuth();
 
@@ -21,10 +21,22 @@ export default function CompeteScreen({ navigation }) {
   const tournaments = [...ongoingTournaments, ...completedTournaments];
 
   const handleCreateTournament = () => {
-    navigation.navigate('CreateTournamentModal', {
-      editMode: false,
-      onSave: handleTournamentCreated,
-    });
+    // Use the onCreateTournament callback from App.js which handles auth and email verification
+    if (onCreateTournament) {
+      onCreateTournament(() => {
+        // This callback runs after successful auth + email verification
+        navigation.navigate('CreateTournamentModal', {
+          editMode: false,
+          onSave: handleTournamentCreated,
+        });
+      });
+    } else {
+      // Fallback if prop not provided (shouldn't happen)
+      navigation.navigate('CreateTournamentModal', {
+        editMode: false,
+        onSave: handleTournamentCreated,
+      });
+    }
   };
 
   const handleTournamentPress = (tournament, openStartSheet = false) => {

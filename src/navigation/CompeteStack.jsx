@@ -11,7 +11,7 @@ import { Colors } from '../constants/Colors';
 
 const Stack = createNativeStackNavigator();
 
-export default function CompeteStack() {
+export default function CompeteStack({ onCreateTournament, onEmailVerificationRequired }) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -20,14 +20,17 @@ export default function CompeteStack() {
       }}
     >
       {/* Regular screens */}
-      <Stack.Screen name="CompeteList" component={CompeteScreen} />
+      <Stack.Screen name="CompeteList">
+        {(props) => <CompeteScreen {...props} onCreateTournament={onCreateTournament} />}
+      </Stack.Screen>
       <Stack.Screen
         name="TournamentDetails"
-        component={TournamentDetailsScreen}
         options={{
           animation: 'slide_from_right',
         }}
-      />
+      >
+        {(props) => <TournamentDetailsScreen {...props} onEmailVerificationRequired={onEmailVerificationRequired} />}
+      </Stack.Screen>
       <Stack.Screen
         name="MatchDetails"
         component={MatchDetailsScreen}

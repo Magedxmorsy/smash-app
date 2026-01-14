@@ -5,6 +5,8 @@ import {
   updateProfile,
   updatePassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
+  reload,
   onAuthStateChanged,
   fetchSignInMethodsForEmail,
   deleteUser
@@ -299,17 +301,15 @@ export const checkEmailExists = async (email) => {
         documentIds: docIds,
         email: userData.email,
         hasPassword: !!userData.passwordSet,
+        profileComplete: !!userData.profileComplete,
         emailVerified: !!userData.emailVerified,
+        createdAt: userData.createdAt,
         allDocs: querySnapshot.docs.map(doc => ({ id: doc.id, email: doc.data().email }))
       });
 
-      // Check if this is an incomplete signup (no password and not verified)
-      // Treat incomplete signups as non-existent so user can retry
-      if (!userData.passwordSet && !userData.emailVerified) {
-        console.log('⚠️ [checkEmailExists] Found incomplete signup - treating as non-existent');
-        return { exists: false, error: null, incomplete: true, uid: userData.uid };
-      }
-
+      // If account exists in Firestore, it means the user already created an account
+      // They should login, not signup again
+      console.log('✅ [checkEmailExists] Account exists - user should login');
       return { exists: true, error: null };
     }
 
@@ -394,29 +394,68 @@ export const setUserPassword = async (uid, password) => {
  */
 export const completeUserProfile = async (uid, profileData) => {
   try {
+    console.log('🔧 [completeUserProfile] Starting with:', { uid, profileData });
     const { firstName, lastName, avatarUri } = profileData;
 
+    // If uid is null, use current user's uid
+    const user = auth.currentUser;
+    const userId = uid || user?.uid;
+
+    console.log('🔧 [completeUserProfile] User ID:', userId);
+
+    if (!userId) {
+      console.error('❌ [completeUserProfile] No user ID available');
+      return { success: false, error: 'No user ID available' };
+    }
+
+    let avatarUrl = avatarUri;
+
+    // If avatarUri is a local file (starts with file:// or doesn't start with http), upload to Storage
+    if (avatarUri && !avatarUri.startsWith('http')) {
+      console.log('📤 [completeUserProfile] Uploading avatar to Storage...');
+      // Import uploadImageFromUri from storageService
+      const { uploadImageFromUri } = require('./storageService');
+
+      // Upload to Firebase Storage under profileImages/{userId}
+      const uploadPath = `profileImages/${userId}/avatar.jpg`;
+      const uploadResult = await uploadImageFromUri(avatarUri, uploadPath);
+
+      if (uploadResult.error) {
+        console.error('❌ [completeUserProfile] Avatar upload failed:', uploadResult.error);
+        return { success: false, error: `Failed to upload avatar: ${uploadResult.error}` };
+      }
+
+      avatarUrl = uploadResult.url; // Use the cloud download URL
+      console.log('✅ [completeUserProfile] Avatar uploaded successfully:', avatarUrl);
+    }
+
+    console.log('📝 [completeUserProfile] Updating Firestore document...');
     // Update user document with profile information
-    await updateDoc(doc(db, 'users', uid), {
+    await updateDoc(doc(db, 'users', userId), {
       firstName: firstName,
       lastName: lastName,
       displayName: `${firstName} ${lastName}`,
-      avatarUri: avatarUri || null,
+      avatarUri: avatarUrl || null,
       profileComplete: true,
       updatedAt: new Date().toISOString(),
     });
+    console.log('✅ [completeUserProfile] Firestore document updated');
 
     // Update Firebase Auth profile
-    const user = auth.currentUser;
     if (user) {
+      console.log('📝 [completeUserProfile] Updating Firebase Auth profile...');
       await updateProfile(user, {
         displayName: `${firstName} ${lastName}`,
+        photoURL: avatarUrl || null, // Also update Firebase Auth photoURL
       });
+      console.log('✅ [completeUserProfile] Firebase Auth profile updated');
     }
 
+    console.log('✅ [completeUserProfile] Profile completed successfully');
     return { success: true, error: null };
   } catch (error) {
-    console.error('Complete profile error:', error);
+    console.error('❌ [completeUserProfile] Error:', error);
+    console.error('❌ [completeUserProfile] Error stack:', error.stack);
     return { success: false, error: error.message };
   }
 };
@@ -429,12 +468,30 @@ export const updateUserProfile = async (uid, profileData) => {
   try {
     const { firstName, lastName, avatarUri } = profileData;
 
+    let avatarUrl = avatarUri;
+
+    // If avatarUri is a local file (starts with file:// or doesn't start with http), upload to Storage
+    if (avatarUri && !avatarUri.startsWith('http')) {
+      // Import uploadImageFromUri from storageService
+      const { uploadImageFromUri } = require('./storageService');
+
+      // Upload to Firebase Storage under profileImages/{uid}
+      const uploadPath = `profileImages/${uid}/avatar.jpg`;
+      const uploadResult = await uploadImageFromUri(avatarUri, uploadPath);
+
+      if (uploadResult.error) {
+        return { success: false, error: `Failed to upload avatar: ${uploadResult.error}` };
+      }
+
+      avatarUrl = uploadResult.url; // Use the cloud download URL
+    }
+
     // Update user document with profile information
     await updateDoc(doc(db, 'users', uid), {
       firstName: firstName,
       lastName: lastName,
       displayName: `${firstName} ${lastName}`,
-      avatarUri: avatarUri !== undefined ? avatarUri : null,
+      avatarUri: avatarUrl !== undefined ? avatarUrl : null,
       updatedAt: new Date().toISOString(),
     });
 
@@ -443,6 +500,7 @@ export const updateUserProfile = async (uid, profileData) => {
     if (user) {
       await updateProfile(user, {
         displayName: `${firstName} ${lastName}`,
+        photoURL: avatarUrl || null, // Also update Firebase Auth photoURL
       });
     }
 
@@ -508,5 +566,106 @@ const getErrorMessage = (errorCode) => {
       return 'Please sign in again to change password';
     default:
       return 'An error occurred. Please try again';
+  }
+};
+
+/**
+ * Create account with Firebase email verification (new flow)
+ */
+export const createAccountWithEmailVerification = async (email, password) => {
+  try {
+    console.log('📧 Creating account with email verification for:', email);
+
+    // Create Firebase Auth user
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Create user document in Firestore
+    await setDoc(doc(db, 'users', user.uid), {
+      uid: user.uid,
+      email: user.email,
+      displayName: null,
+      emailVerified: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Create default notification settings
+    await createDefaultNotificationSettings(user.uid);
+
+    // Send verification email (using Firebase default settings for now)
+    await sendEmailVerification(user);
+
+    console.log('✅ Account created and verification email sent to:', user.email);
+
+    return { success: true, user, error: null };
+  } catch (error) {
+    console.error('Create account error:', error);
+    return { success: false, user: null, error: getErrorMessage(error.code) };
+  }
+};
+
+/**
+ * Resend verification email to current user
+ */
+export const resendVerificationEmail = async () => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      console.log('❌ No user logged in');
+      return { success: false, error: 'No user logged in' };
+    }
+
+    if (user.emailVerified) {
+      console.log('❌ Email already verified');
+      return { success: false, error: 'Email is already verified' };
+    }
+
+    console.log('📧 Sending verification email to:', user.email);
+
+    // Send verification email without custom settings for now (for testing)
+    // The actionCodeSettings might be causing issues if domain isn't authorized
+    await sendEmailVerification(user);
+
+    console.log('✅ Verification email sent successfully to:', user.email);
+
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('❌ Resend verification email error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Check if current user's email is verified
+ */
+export const checkEmailVerificationStatus = async () => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      return { verified: false, error: 'No user logged in' };
+    }
+
+    // Reload user to get latest emailVerified status
+    await reload(user);
+
+    console.log('📧 Email verification status:', user.emailVerified);
+
+    // Update Firestore document with verification status
+    if (user.emailVerified) {
+      await updateDoc(doc(db, 'users', user.uid), {
+        emailVerified: true,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    return { verified: user.emailVerified, error: null };
+  } catch (error) {
+    console.error('Check email verification error:', error);
+    return { verified: false, error: error.message };
   }
 };
