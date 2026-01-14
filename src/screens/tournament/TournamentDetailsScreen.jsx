@@ -42,9 +42,9 @@ import ChevronDownIcon from '../../../assets/icons/chevrondown.svg';
 import InfoIcon from '../../../assets/icons/infoicon.svg';
 import CloseIcon from '../../../assets/icons/close.svg';
 
-export default function TournamentDetailsScreen({ navigation, route }) {
+export default function TournamentDetailsScreen({ navigation, route, onEmailVerificationRequired }) {
   const { tournament: propTournament, tournamentId, onAuthRequired, openStartSheet } = route?.params || {};
-  const { isAuthenticated, userData } = useAuth();
+  const { isAuthenticated, userData, isEmailVerified } = useAuth();
   const { deleteTournament, getTournamentById, updateTournament, removePlayerFromTeam } = useTournaments();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -107,11 +107,23 @@ export default function TournamentDetailsScreen({ navigation, route }) {
 
   const handleShare = async () => {
     try {
-      // Use custom scheme (works without owning domain)
-      const tournamentLink = `smash://tournament/${tournament.id}`;
+      // Use HTTPS domain for universal sharing
+      const tournamentLink = `https://getsmash.net/tournament/${tournament.id}`;
+
+      // Format date and time properly
+      const formattedDateTime = tournament.dateTime
+        ? (() => {
+            const dateObj = new Date(tournament.dateTime);
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = dateObj.toLocaleDateString('en-US', dateOptions);
+            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+            const formattedTime = dateObj.toLocaleTimeString('en-US', timeOptions);
+            return `${formattedDate} | ${formattedTime}`;
+          })()
+        : 'Date TBD';
 
       // Create share message with tournament details
-      const shareMessage = `Join my tournament "${tournament.name}" on Smash! 🎾\n\n📍 ${tournament.location || 'Location TBD'}\n📅 ${tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'Date TBD'}\n\nOpen in Smash app:\n${tournamentLink}\n\nTournament ID: ${tournament.id}`;
+      const shareMessage = `Join my tournament "${tournament.name}" on Smash! 🎾\n\n📍 ${tournament.location || 'Location TBD'}\n📅 ${formattedDateTime}\n\nOpen in Smash app:\n${tournamentLink}\n\nTournament ID: ${tournament.id}`;
 
       const result = await Share.share(
         {
@@ -140,6 +152,13 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       onAuthRequired && onAuthRequired(() => {
         setShowCreateTeamSheet(true);
       });
+      return;
+    }
+
+    // Check if email is verified
+    if (!isEmailVerified) {
+      // Show email verification modal so user can resend link
+      onEmailVerificationRequired && onEmailVerificationRequired();
       return;
     }
 
@@ -327,6 +346,14 @@ export default function TournamentDetailsScreen({ navigation, route }) {
         });
         return;
       }
+
+      // Check if email is verified
+      if (!isEmailVerified) {
+        // Show email verification modal so user can resend link
+        onEmailVerificationRequired && onEmailVerificationRequired();
+        return;
+      }
+
       setSelectedTeam(team);
       setShowJoinTeamSheet(true);
     }
@@ -339,6 +366,13 @@ export default function TournamentDetailsScreen({ navigation, route }) {
       onAuthRequired && onAuthRequired(() => {
         setShowCreateTeamSheet(true);
       });
+      return;
+    }
+
+    // Check if email is verified
+    if (!isEmailVerified) {
+      // Show email verification modal so user can resend link
+      onEmailVerificationRequired && onEmailVerificationRequired();
       return;
     }
 

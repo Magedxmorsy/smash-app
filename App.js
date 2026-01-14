@@ -12,20 +12,22 @@ import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import EmailVerificationScreen from './src/screens/auth/EmailVerificationScreen';
 import CreatePasswordScreen from './src/screens/auth/CreatePasswordScreen';
 import ProfileSetupScreen from './src/screens/auth/ProfileSetupScreen';
+import CreateAccountScreen from './src/screens/auth/CreateAccountScreen';
+import EmailVerificationPendingScreen from './src/screens/auth/EmailVerificationPendingScreen';
 import TabNavigator from './src/navigation/TabNavigator';
-import { verifyEmailCode, resendVerificationCode, createUserWithVerificationCode, setUserPassword } from './src/services/authService';
+import { verifyEmailCode, resendVerificationCode, createUserWithVerificationCode, setUserPassword, createAccountWithEmailVerification } from './src/services/authService';
 import { Alert } from 'react-native';
 import { Colors } from './src/constants/Colors';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { TournamentProvider } from './src/contexts/TournamentContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
-import { ToastProvider } from './src/contexts/ToastContext';
+import { ToastProvider, useToast } from './src/contexts/ToastContext';
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
 // Deep linking configuration
 const linking = {
-  prefixes: ['smash://', 'https://smash.app'],
+  prefixes: ['smash://', 'https://getsmash.net'],
   config: {
     screens: {
       HomeTab: {
@@ -54,11 +56,15 @@ const linking = {
 function MainApp() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [authScreen, setAuthScreen] = useState('login'); // 'login', 'signup', 'verification', 'createPassword', or 'profileSetup'
+  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+  const [authScreen, setAuthScreen] = useState('login'); // 'login', 'signup', 'verification', 'createPassword', 'profileSetup', or 'createAccount'
   const [pendingVerification, setPendingVerification] = useState(null);
+  const [pendingNewUser, setPendingNewUser] = useState(null); // Store email for new Firebase flow
   const [pendingAction, setPendingAction] = useState(null); // Store action to perform after auth
-  const { isAuthenticated, loading, refreshUserData, setIsSigningUp } = useAuth();
+  const { isAuthenticated, loading, refreshUserData, setIsSigningUp, isEmailVerified, userData } = useAuth();
+  const { showToast } = useToast();
   const wasAuthenticatedRef = useRef(false);
+  const emailVerificationModalDismissedRef = useRef(false); // Track if user manually dismissed the modal
 
   useEffect(() => {
     checkOnboarding();
@@ -71,6 +77,7 @@ function MainApp() {
       const timer = setTimeout(() => {
         setAuthScreen('login');
         setPendingVerification(null);
+        setPendingNewUser(null);
         // Don't clear pendingAction here - we need it after successful auth
       }, 300);
       return () => clearTimeout(timer);
@@ -79,7 +86,7 @@ function MainApp() {
 
   // Execute pending action after successful authentication
   useEffect(() => {
-    if (isAuthenticated && pendingAction && !showLoginModal) {
+    if (isAuthenticated && pendingAction && !showLoginModal && !showEmailVerificationModal) {
       // Small delay to ensure modal is fully closed
       const timer = setTimeout(() => {
         console.log('Executing pending action:', pendingAction);
@@ -90,12 +97,23 @@ function MainApp() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, pendingAction, showLoginModal]);
+  }, [isAuthenticated, pendingAction, showLoginModal, showEmailVerificationModal]);
+
+  // Show email verification modal if user is authenticated but email not verified
+  useEffect(() => {
+    if (isAuthenticated && !isEmailVerified && !loading && !showLoginModal && userData && !emailVerificationModalDismissedRef.current) {
+      // Small delay to ensure login modal is fully closed
+      const timer = setTimeout(() => {
+        setShowEmailVerificationModal(true);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, isEmailVerified, loading, showLoginModal, userData]);
 
   const checkOnboarding = async () => {
     try {
       // TEMPORARY: Always show onboarding for development
-      await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      // await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
 
       const hasCompletedOnboarding = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
       if (!hasCompletedOnboarding) {
@@ -216,6 +234,7 @@ function MainApp() {
     // Reset to login screen and clear any pending data
     setAuthScreen('login');
     setPendingVerification(null);
+    setPendingNewUser(null);
     // Reset signup flag when modal closes
     setIsSigningUp(false);
   };
@@ -234,8 +253,14 @@ function MainApp() {
       // User is not authenticated, show login modal and store the callback
       setPendingAction({ type: 'createTournament', callback });
       setShowLoginModal(true);
+    } else if (!isEmailVerified) {
+      // User is authenticated but email not verified - show verification modal
+      setPendingAction({ type: 'createTournament', callback });
+      // Reset dismissed flag when user actively tries to create tournament
+      emailVerificationModalDismissedRef.current = false;
+      setShowEmailVerificationModal(true);
     } else {
-      // User is authenticated, execute callback directly
+      // User is authenticated and verified, execute callback directly
       if (callback) {
         callback();
       }
@@ -247,22 +272,95 @@ function MainApp() {
       // Set flag to prevent auto-logout during signup
       setIsSigningUp(true);
 
-      // Create user account and send verification code
-      const { success, uid, error } = await createUserWithVerificationCode(email);
-
-      if (success) {
-        // Navigate to verification screen for new users
-        setPendingVerification({ email, uid });
-        setAuthScreen('verification');
-      } else {
-        Alert.alert('Error', error || 'Failed to create account');
-        // Reset flag if failed
-        setIsSigningUp(false);
-      }
+      // Store email and navigate to create account (password) screen
+      setPendingNewUser({ email });
+      setAuthScreen('createAccount');
     } else {
       // Show password field for existing users (handled within LoginScreen)
       // The LoginScreen will handle this internally
     }
+  };
+
+  const handleAccountCreated = async (email, password) => {
+    // Create account with Firebase email verification
+    const { success, error } = await createAccountWithEmailVerification(email, password);
+
+    if (success) {
+      // Show success toast
+      showToast(`Verification email sent to ${email}`);
+
+      // Navigate to profile setup
+      setPendingNewUser({ email });
+      setAuthScreen('profileSetup');
+    } else {
+      Alert.alert('Error', error || 'Failed to create account');
+      // Reset flag if failed
+      setIsSigningUp(false);
+    }
+  };
+
+  const handleNewUserProfileComplete = async (profileData) => {
+    console.log('🎯 [handleNewUserProfileComplete] Starting with:', profileData);
+    if (!pendingNewUser) {
+      console.log('❌ [handleNewUserProfileComplete] No pending new user');
+      return;
+    }
+
+    // Save profile data to Firebase
+    const { completeUserProfile } = await import('./src/services/authService');
+    const { success, error } = await completeUserProfile(null, profileData); // Pass null for uid since user is already authenticated
+
+    console.log('🎯 [handleNewUserProfileComplete] completeUserProfile result:', { success, error });
+
+    if (success) {
+      console.log('🎯 [handleNewUserProfileComplete] Refreshing user data...');
+      // Refresh user data to get the updated profile information
+      await refreshUserData();
+      console.log('🎯 [handleNewUserProfileComplete] User data refreshed');
+
+      console.log('🎯 [handleNewUserProfileComplete] Resetting signup flag...');
+      // Reset signup flag - signup is now complete
+      setIsSigningUp(false);
+
+      console.log('🎯 [handleNewUserProfileComplete] Closing auth modal...');
+      // Close auth modal
+      setPendingNewUser(null);
+      setAuthScreen('login');
+      setShowLoginModal(false);
+
+      console.log('🎯 [handleNewUserProfileComplete] Showing email verification modal...');
+      // Show email verification modal
+      setShowEmailVerificationModal(true);
+      console.log('✅ [handleNewUserProfileComplete] Complete!');
+    } else {
+      console.error('❌ [handleNewUserProfileComplete] Error:', error);
+      Alert.alert('Error', error || 'Failed to complete profile');
+    }
+  };
+
+  const handleEmailVerified = async () => {
+    // Refresh user data to update email verification status
+    await refreshUserData();
+
+    // Close email verification modal
+    setShowEmailVerificationModal(false);
+
+    // Reset the dismissed flag since email is now verified
+    emailVerificationModalDismissedRef.current = false;
+
+    // Execute pending action if any
+    if (pendingAction && pendingAction.callback) {
+      pendingAction.callback();
+      setPendingAction(null);
+    }
+  };
+
+  const handleCloseEmailVerificationModal = () => {
+    setShowEmailVerificationModal(false);
+    // Clear pending action when modal is closed without verification
+    setPendingAction(null);
+    // Mark that user manually dismissed the modal
+    emailVerificationModalDismissedRef.current = true;
   };
 
   const renderAuthScreen = () => {
@@ -308,10 +406,29 @@ function MainApp() {
           />
         );
       case 'profileSetup':
+        // Check if this is the new Firebase flow or old verification flow
+        if (pendingNewUser) {
+          return (
+            <ProfileSetupScreen
+              onProfileComplete={handleNewUserProfileComplete}
+              onBack={() => setAuthScreen('createAccount')}
+            />
+          );
+        } else {
+          return (
+            <ProfileSetupScreen
+              onProfileComplete={handleProfileComplete}
+              onBack={() => setAuthScreen('createPassword')}
+            />
+          );
+        }
+      case 'createAccount':
         return (
-          <ProfileSetupScreen
-            onProfileComplete={handleProfileComplete}
-            onBack={() => setAuthScreen('createPassword')}
+          <CreateAccountScreen
+            email={pendingNewUser?.email || ''}
+            onBack={() => setAuthScreen('signup')}
+            onClose={handleModalClose}
+            onAccountCreated={handleAccountCreated}
           />
         );
       default:
@@ -344,6 +461,11 @@ function MainApp() {
         <TabNavigator
           onCreateAccount={handleCreateAccount}
           onCreateTournament={handleCreateTournament}
+          onEmailVerificationRequired={() => {
+            // Reset dismissed flag when user actively tries to join/create team
+            emailVerificationModalDismissedRef.current = false;
+            setShowEmailVerificationModal(true);
+          }}
         />
         <StatusBar style="dark" />
       </NavigationContainer>
@@ -356,6 +478,20 @@ function MainApp() {
         onRequestClose={handleModalClose}
       >
         {renderAuthScreen()}
+      </Modal>
+
+      {/* Email Verification Modal */}
+      <Modal
+        visible={showEmailVerificationModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseEmailVerificationModal}
+      >
+        <EmailVerificationPendingScreen
+          email={userData?.email || ''}
+          onVerified={handleEmailVerified}
+          onClose={handleCloseEmailVerificationModal}
+        />
       </Modal>
     </>
   );
