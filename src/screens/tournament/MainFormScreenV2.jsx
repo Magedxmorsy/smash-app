@@ -362,18 +362,19 @@ export default function MainFormScreenV2({
           )}
 
           {/* Android: Modal picker */}
-          {Platform.OS === 'android' && (
+          {Platform.OS === 'android' && showTeamPicker && (
             <Modal
               visible={showTeamPicker}
               transparent={true}
               animationType="slide"
               onRequestClose={() => setShowTeamPicker(false)}
             >
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setShowTeamPicker(false)}
-              >
+              <View style={styles.modalOverlay}>
+                <TouchableOpacity
+                  style={styles.modalBackdrop}
+                  activeOpacity={1}
+                  onPress={() => setShowTeamPicker(false)}
+                />
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Select number of teams</Text>
@@ -399,7 +400,7 @@ export default function MainFormScreenV2({
                     ))}
                   </Picker>
                 </View>
-              </TouchableOpacity>
+              </View>
             </Modal>
           )}
         </>
@@ -526,8 +527,15 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
     backgroundColor: Colors.background,
