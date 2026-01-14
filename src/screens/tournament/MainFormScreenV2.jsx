@@ -421,24 +421,28 @@ export default function MainFormScreenV2({
         />
       )}
 
-      {/* Team Count Picker Modal (Android only) */}
-      {showTeamPicker && Platform.OS === 'android' && (
-        <Picker
-          selectedValue={teamCount || 8}
-          onValueChange={(itemValue) => {
-            setTeamCount(itemValue);
-            setShowTeamPicker(false);
-            if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
-          }}
-        >
-          {teamOptions.map((count) => (
-            <Picker.Item
-              key={count}
-              label={`${count} teams`}
-              value={count}
-            />
-          ))}
-        </Picker>
+      {/* Team Count Picker Modal - Android shows immediately when pressing */}
+      {Platform.OS === 'android' && showTeamPicker && (
+        <View style={styles.androidPickerModal}>
+          <Picker
+            selectedValue={teamCount || 8}
+            onValueChange={(itemValue) => {
+              setTeamCount(itemValue);
+              setShowTeamPicker(false);
+              if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+            }}
+            style={styles.androidPicker}
+          >
+            {teamOptions.map((count) => (
+              <Picker.Item
+                key={count}
+                label={`${count} teams`}
+                value={count}
+                color={Colors.primary300}
+              />
+            ))}
+          </Picker>
+        </View>
       )}
     </ScrollView>
   );
@@ -499,6 +503,20 @@ const styles = StyleSheet.create({
   },
   clarificationBold: {
     fontFamily: 'GeneralSans-Semibold',
+    color: Colors.primary300,
+  },
+  androidPickerModal: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.background,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    elevation: 20,
+  },
+  androidPicker: {
+    width: '100%',
     color: Colors.primary300,
   },
 });

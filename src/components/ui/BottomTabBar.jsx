@@ -74,20 +74,23 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
   return (
     <Animated.View style={[
       styles.container,
+      Platform.OS === 'android' && styles.containerAndroid, // Solid background for Android
       {
         transform: [{ translateY }]
       }
     ]}>
-      <BlurView
-        intensity={80}
-        tint="light"
-        style={[
-          StyleSheet.absoluteFillObject,
-          {
-            bottom: Platform.OS === 'ios' ? -insets.bottom : 0,
-          }
-        ]}
-      />
+      {Platform.OS === 'ios' && (
+        <BlurView
+          intensity={80}
+          tint="light"
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              bottom: -insets.bottom,
+            }
+          ]}
+        />
+      )}
       <View style={styles.tabsWrapper}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
@@ -147,6 +150,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     overflow: 'visible',
+  },
+  containerAndroid: {
+    backgroundColor: Colors.background, // Solid background for Android
   },
   tabsWrapper: {
     flexDirection: 'row',
