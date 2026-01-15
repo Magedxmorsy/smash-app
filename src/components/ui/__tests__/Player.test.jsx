@@ -28,7 +28,7 @@ describe('Player', () => {
       <Player
         firstName="Bob"
         lastName="Johnson"
-        avatarSource={{ uri: 'https://example.com/avatar.jpg' }}
+        avatarUri={{ uri: 'https://example.com/avatar.jpg' }}
       />
     );
 

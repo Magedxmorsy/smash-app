@@ -25,12 +25,12 @@ describe('WinnersBanner', () => {
         id: 'match-finals',
         round: 'Finals',
         team1: {
-          player1: { firstName: 'Leo', lastName: 'Miguele', avatarSource: null, userId: 'user1' },
-          player2: { firstName: 'John', lastName: 'Smith', avatarSource: null, userId: 'user2' },
+          player1: { firstName: 'Leo', lastName: 'Miguele', avatarUri: null, userId: 'user1' },
+          player2: { firstName: 'John', lastName: 'Smith', avatarUri: null, userId: 'user2' },
         },
         team2: {
-          player1: { firstName: 'Abdullah', lastName: 'Gaber', avatarSource: null, userId: 'user3' },
-          player2: { firstName: 'Sarah', lastName: 'Johnson', avatarSource: null, userId: 'user4' },
+          player1: { firstName: 'Abdullah', lastName: 'Gaber', avatarUri: null, userId: 'user3' },
+          player2: { firstName: 'Sarah', lastName: 'Johnson', avatarUri: null, userId: 'user4' },
         },
         winningTeam: 'left',
         score: { team1: 21, team2: 19 },
@@ -331,13 +331,13 @@ describe('WinnersBanner', () => {
               player1: {
                 firstName: 'Leo',
                 lastName: 'Miguele',
-                avatarSource: { uri: 'https://example.com/leo.jpg' },
+                avatarUri: { uri: 'https://example.com/leo.jpg' },
                 userId: 'user1',
               },
               player2: {
                 firstName: 'John',
                 lastName: 'Smith',
-                avatarSource: { uri: 'https://example.com/john.jpg' },
+                avatarUri: { uri: 'https://example.com/john.jpg' },
                 userId: 'user2',
               },
             },

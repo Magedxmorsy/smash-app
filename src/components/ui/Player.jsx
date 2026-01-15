@@ -5,14 +5,14 @@ import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
 
-export default function Player({ firstName, lastName, avatarSource, align = 'left' }) {
+export default function Player({ firstName, lastName, avatarUri, align = 'left' }) {
   const isRTL = align === 'right';
 
   return (
     <View style={[styles.container, isRTL && styles.containerRTL]}>
       <Avatar
         size="small"
-        source={avatarSource}
+        source={avatarUri}
         name={`${firstName} ${lastName}`}
       />
       <View style={[styles.nameContainer, isRTL && styles.nameContainerRTL]}>

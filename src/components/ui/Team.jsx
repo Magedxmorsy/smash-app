@@ -14,13 +14,13 @@ export default function Team({ player1, player2, align = 'left' }) {
       <Player
         firstName={player1.firstName}
         lastName={player1.lastName}
-        avatarSource={player1.avatarSource}
+        avatarUri={player1.avatarUri}
         align={align}
       />
       <Player
         firstName={player2.firstName}
         lastName={player2.lastName}
-        avatarSource={player2.avatarSource}
+        avatarUri={player2.avatarUri}
         align={align}
       />
     </View>

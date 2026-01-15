@@ -27,12 +27,12 @@ describe('Team', () => {
   it('should render players with avatar sources', () => {
     const player1WithAvatar = {
       ...mockPlayer1,
-      avatarSource: { uri: 'https://example.com/john.jpg' },
+      avatarUri: { uri: 'https://example.com/john.jpg' },
     };
 
     const player2WithAvatar = {
       ...mockPlayer2,
-      avatarSource: { uri: 'https://example.com/jane.jpg' },
+      avatarUri: { uri: 'https://example.com/jane.jpg' },
     };
 
     const { getByText } = render(

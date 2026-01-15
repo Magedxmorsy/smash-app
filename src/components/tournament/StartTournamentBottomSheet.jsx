@@ -220,13 +220,13 @@ export default function StartTournamentBottomSheet({
                         <Player
                           firstName={team.player1.firstName}
                           lastName={team.player1.lastName}
-                          avatarSource={team.player1.avatarUri}
+                          avatarUri={team.player1.avatarUri}
                           align="left"
                         />
                         <Player
                           firstName={team.player2.firstName}
                           lastName={team.player2.lastName}
-                          avatarSource={team.player2.avatarUri}
+                          avatarUri={team.player2.avatarUri}
                           align="right"
                         />
                       </View>

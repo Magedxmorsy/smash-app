@@ -20,12 +20,12 @@ describe('MatchCard', () => {
     player1: {
       firstName: 'Ahmed',
       lastName: 'Basyouni',
-      avatarSource: require('../../../../assets/avatars/ahmed.jpg'),
+      avatarUri: require('../../../../assets/avatars/ahmed.jpg'),
     },
     player2: {
       firstName: 'Leo',
       lastName: 'Miguele',
-      avatarSource: require('../../../../assets/avatars/leo.jpg'),
+      avatarUri: require('../../../../assets/avatars/leo.jpg'),
     },
   };
 
@@ -33,12 +33,12 @@ describe('MatchCard', () => {
     player1: {
       firstName: 'Omar',
       lastName: 'Ibrahim',
-      avatarSource: require('../../../../assets/avatars/omar.jpg'),
+      avatarUri: require('../../../../assets/avatars/omar.jpg'),
     },
     player2: {
       firstName: 'Karim',
       lastName: 'Omar',
-      avatarSource: require('../../../../assets/avatars/karim.jpg'),
+      avatarUri: require('../../../../assets/avatars/karim.jpg'),
     },
   };
 

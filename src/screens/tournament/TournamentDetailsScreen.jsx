@@ -230,9 +230,9 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         userId: userData.uid, // Add userId to track team ownership
       };
 
-      // Only add avatarSource if it exists (avoid null/undefined in Firestore)
+      // Only add avatarUri if it exists (avoid null/undefined in Firestore)
       if (userData.avatarUri) {
-        player1Data.avatarSource = { uri: userData.avatarUri };
+        player1Data.avatarUri = { uri: userData.avatarUri };
       }
 
       teams.push({
@@ -272,7 +272,7 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       player1: {
         firstName: 'Ahmed',
         lastName: 'Basyouni',
-        avatarSource: require('../../../assets/avatars/ahmed.jpg'),
+        avatarUri: require('../../../assets/avatars/ahmed.jpg'),
       },
       player2: null,
     },
@@ -280,19 +280,19 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       player1: {
         firstName: 'Leo',
         lastName: 'Miguele',
-        avatarSource: require('../../../assets/avatars/leo.jpg'),
+        avatarUri: require('../../../assets/avatars/leo.jpg'),
       },
       player2: {
         firstName: 'Abdullah',
         lastName: 'Gaber',
-        avatarSource: require('../../../assets/avatars/alex.jpg'),
+        avatarUri: require('../../../assets/avatars/alex.jpg'),
       },
     },
     {
       player1: {
         firstName: 'Oorgive',
         lastName: 'Santene',
-        avatarSource: require('../../../assets/avatars/omar.jpg'),
+        avatarUri: require('../../../assets/avatars/omar.jpg'),
       },
       player2: null,
     },
@@ -300,19 +300,19 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       player1: {
         firstName: 'Mitch',
         lastName: 'Mogul',
-        avatarSource: require('../../../assets/avatars/chris.jpg'),
+        avatarUri: require('../../../assets/avatars/chris.jpg'),
       },
       player2: {
         firstName: 'Alan',
         lastName: 'Faynne',
-        avatarSource: require('../../../assets/avatars/jack.jpg'),
+        avatarUri: require('../../../assets/avatars/jack.jpg'),
       },
     },
     {
       player1: {
         firstName: 'Karim',
         lastName: 'Omar',
-        avatarSource: require('../../../assets/avatars/karim.jpg'),
+        avatarUri: require('../../../assets/avatars/karim.jpg'),
       },
       player2: null,
     },
@@ -396,9 +396,9 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         userId: userData.uid,
       };
 
-      // Only add avatarSource if it exists (avoid null/undefined in Firestore)
+      // Only add avatarUri if it exists (avoid null/undefined in Firestore)
       if (userData.avatarUri) {
-        player1Data.avatarSource = { uri: userData.avatarUri };
+        player1Data.avatarUri = { uri: userData.avatarUri };
       }
 
       const newTeam = {
@@ -452,9 +452,9 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         userId: userData.uid,
       };
 
-      // Only add avatarSource if it exists (avoid null/undefined in Firestore)
+      // Only add avatarUri if it exists (avoid null/undefined in Firestore)
       if (userData.avatarUri) {
-        player2Data.avatarSource = { uri: userData.avatarUri };
+        player2Data.avatarUri = { uri: userData.avatarUri };
       }
 
       updatedTeams[teamIndex] = {
@@ -1241,13 +1241,13 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
                             <Player
                               firstName={team.player1.firstName}
                               lastName={team.player1.lastName}
-                              avatarSource={team.player1.avatarUri}
+                              avatarUri={team.player1.avatarUri}
                               align="left"
                             />
                             <Player
                               firstName={team.player2.firstName}
                               lastName={team.player2.lastName}
-                              avatarSource={team.player2.avatarUri}
+                              avatarUri={team.player2.avatarUri}
                               align="right"
                             />
                           </View>
