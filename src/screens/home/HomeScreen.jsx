@@ -236,15 +236,18 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
 
           // Then navigate to the newly created tournament in Compete tab
           if (tournament?.id) {
-            // First get the root navigation (tab navigator)
-            const rootNavigation = navigation.getParent();
-            if (rootNavigation) {
-              // Navigate to CompeteTab, then to TournamentDetails screen
-              rootNavigation.navigate('CompeteTab', {
-                screen: 'TournamentDetails',
-                params: { tournamentId: tournament.id }
-              });
-            }
+            // Wait for modal close animation to complete before navigating
+            setTimeout(() => {
+              // First get the root navigation (tab navigator)
+              const rootNavigation = navigation.getParent();
+              if (rootNavigation) {
+                // Navigate to CompeteTab, then to TournamentDetails screen
+                rootNavigation.navigate('CompeteTab', {
+                  screen: 'TournamentDetails',
+                  params: { tournamentId: tournament.id }
+                });
+              }
+            }, 400);
           }
         }}
       />

@@ -371,13 +371,9 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
             placeholder="Add number of teams"
             value={formatTeamCount(teamCount)}
             onPress={() => {
-              console.log('🔧 Team picker pressed!');
-              console.log('🔧 isTournamentStarted:', isTournamentStarted);
-              console.log('🔧 Platform:', Platform.OS);
               if (isTournamentStarted) return;
               Keyboard.dismiss();
-              setShowTeamPicker(true);
-              console.log('🔧 setShowTeamPicker(true) called');
+              setShowTeamPicker(!showTeamPicker);
             }}
             disabled={isTournamentStarted}
             error={errors.teamCount}
