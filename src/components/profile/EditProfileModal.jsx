@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import Avatar from '../ui/Avatar';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
@@ -42,15 +43,39 @@ export default function EditProfileModal({ visible, onClose }) {
         return;
       }
 
+      // Launch image picker WITHOUT built-in editor on Android to avoid UI issues
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        allowsEditing: Platform.OS === 'ios', // Only use built-in editor on iOS
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setAvatarUri(result.assets[0].uri);
+        const selectedImage = result.assets[0];
+
+        // For Android, use expo-image-manipulator to crop programmatically
+        if (Platform.OS === 'android') {
+          // Calculate center square crop
+          const { width, height } = selectedImage;
+          const size = Math.min(width, height);
+          const originX = (width - size) / 2;
+          const originY = (height - size) / 2;
+
+          const manipResult = await ImageManipulator.manipulateAsync(
+            selectedImage.uri,
+            [
+              { crop: { originX, originY, width: size, height: size } },
+              { resize: { width: 400, height: 400 } }
+            ],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+          );
+
+          setAvatarUri(manipResult.uri);
+        } else {
+          // iOS: use the already-edited image
+          setAvatarUri(selectedImage.uri);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);

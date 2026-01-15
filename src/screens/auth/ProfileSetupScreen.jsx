@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
@@ -29,11 +30,11 @@ export default function ProfileSetupScreen({ onProfileComplete, onBack }) {
         return;
       }
 
-      // Launch image picker
+      // Launch image picker WITHOUT built-in editor to avoid Android UI issues
       console.log('📸 [ProfileSetup] Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions?.Images || 'images',
-        allowsEditing: true,
+        allowsEditing: Platform.OS === 'ios', // Only use built-in editor on iOS
         aspect: [1, 1],
         quality: 0.8,
       });
@@ -45,8 +46,34 @@ export default function ProfileSetupScreen({ onProfileComplete, onBack }) {
       });
 
       if (!result.canceled && result.assets[0]) {
-        console.log('📸 [ProfileSetup] Setting avatar URI:', result.assets[0].uri);
-        setAvatarUri(result.assets[0].uri);
+        const selectedImage = result.assets[0];
+
+        // For Android, use expo-image-manipulator to crop programmatically
+        if (Platform.OS === 'android') {
+          console.log('📸 [ProfileSetup] Cropping image with expo-image-manipulator...');
+
+          // Calculate center square crop
+          const { width, height } = selectedImage;
+          const size = Math.min(width, height);
+          const originX = (width - size) / 2;
+          const originY = (height - size) / 2;
+
+          const manipResult = await ImageManipulator.manipulateAsync(
+            selectedImage.uri,
+            [
+              { crop: { originX, originY, width: size, height: size } },
+              { resize: { width: 400, height: 400 } }
+            ],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+          );
+
+          console.log('📸 [ProfileSetup] Setting cropped avatar URI:', manipResult.uri);
+          setAvatarUri(manipResult.uri);
+        } else {
+          // iOS: use the already-edited image
+          console.log('📸 [ProfileSetup] Setting avatar URI:', selectedImage.uri);
+          setAvatarUri(selectedImage.uri);
+        }
       }
     } catch (error) {
       console.error('📸 [ProfileSetup] Error picking image:', error);

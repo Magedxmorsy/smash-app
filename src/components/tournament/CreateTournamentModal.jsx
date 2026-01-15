@@ -1,4 +1,4 @@
-import { Modal, View, StyleSheet } from 'react-native';
+import { Modal, View, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TournamentFormNavigator from '../../navigation/TournamentFormNavigator';
 import { TournamentFormProvider } from '../../contexts/TournamentFormContext';
