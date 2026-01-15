@@ -47,7 +47,7 @@ export default function WinnersBanner({ tournament }) {
           <Player
             firstName={winningTeamData.player1.firstName}
             lastName={winningTeamData.player1.lastName}
-            avatarSource={winningTeamData.player1.avatarSource}
+            avatarSource={winningTeamData.player1.avatarUri}
             align="left"
           />
         </View>
@@ -57,7 +57,7 @@ export default function WinnersBanner({ tournament }) {
           <Player
             firstName={winningTeamData.player2.firstName}
             lastName={winningTeamData.player2.lastName}
-            avatarSource={winningTeamData.player2.avatarSource}
+            avatarSource={winningTeamData.player2.avatarUri}
             align="right"
           />
         </View>

@@ -241,11 +241,22 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
               // First get the root navigation (tab navigator)
               const rootNavigation = navigation.getParent();
               if (rootNavigation) {
-                // Navigate to CompeteTab, then to TournamentDetails screen
-                rootNavigation.navigate('CompeteTab', {
-                  screen: 'TournamentDetails',
-                  params: { tournamentId: tournament.id }
-                });
+                // First switch to CompeteTab
+                rootNavigation.navigate('CompeteTab');
+
+                // Then push TournamentDetails onto the CompeteTab stack
+                // We need a small delay to ensure tab switch completes
+                setTimeout(() => {
+                  // Get the CompeteTab navigator
+                  const competeNav = rootNavigation.getState().routes.find(r => r.name === 'CompeteTab');
+                  if (competeNav) {
+                    rootNavigation.navigate('CompeteTab', {
+                      screen: 'TournamentDetails',
+                      params: { tournamentId: tournament.id },
+                      initial: false, // Don't reset the stack
+                    });
+                  }
+                }, 100);
               }
             }, 400);
           }

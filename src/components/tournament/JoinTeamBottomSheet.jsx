@@ -58,7 +58,7 @@ export default function JoinTeamBottomSheet({
           <View style={styles.playerContainer}>
             <Avatar
               size="large"
-              source={teamPlayer?.avatarSource}
+              source={teamPlayer?.avatarUri}
               name={`${teamPlayer?.firstName} ${teamPlayer?.lastName}`}
             />
             <Text style={styles.playerName}>
