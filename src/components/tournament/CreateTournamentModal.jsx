@@ -23,10 +23,12 @@ export default function CreateTournamentModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.backdrop} />
+      <View style={styles.container}>
         {/* Swipe Handle */}
         <View style={styles.handleContainer} pointerEvents="none">
           <View style={styles.handle} />
@@ -41,19 +43,23 @@ export default function CreateTournamentModal({
             showHandle={false}
           />
         </TournamentFormProvider>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: Spacing.space2,
+    paddingTop: 64,
     paddingBottom: 0,
   },
   handle: {

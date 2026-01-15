@@ -143,9 +143,11 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
+      transparent={Platform.OS === 'android'}
       onRequestClose={onClose}
     >
+      {Platform.OS === 'android' && <View style={styles.backdrop} />}
       <View style={styles.container}>
         {/* Swipe Indicator */}
         <View style={styles.swipeIndicator} />
@@ -267,6 +269,10 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

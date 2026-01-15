@@ -112,9 +112,11 @@ export default function StartTournamentBottomSheet({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
+      transparent={Platform.OS === 'android'}
       onRequestClose={handleClose}
     >
+      {Platform.OS === 'android' && <View style={styles.backdrop} />}
       <View style={styles.container}>
         {/* Swipe Indicator */}
         <View style={styles.swipeIndicator} />
@@ -271,6 +273,10 @@ export default function StartTournamentBottomSheet({
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

@@ -1742,9 +1742,11 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       <Modal
         visible={showFormatInfoSheet}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
+        transparent={Platform.OS === 'android'}
         onRequestClose={() => setShowFormatInfoSheet(false)}
       >
+        {Platform.OS === 'android' && <View style={styles.modalBackdrop} />}
         <SafeAreaView style={styles.formatInfoContainer} edges={['top']}>
           {/* Swipe Indicator */}
           <View style={styles.handleContainer}>
@@ -2023,5 +2025,9 @@ const styles = StyleSheet.create({
     fontSize: Typography.body200,
     color: Colors.primary300,
     lineHeight: Typography.body200 * 1.5,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
 });

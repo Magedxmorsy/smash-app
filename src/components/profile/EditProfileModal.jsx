@@ -124,10 +124,12 @@ export default function EditProfileModal({ visible, onClose }) {
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.backdrop} />
+      <View style={styles.container}>
         {/* Swipe Handle */}
         <View style={styles.handleContainer} pointerEvents="none">
           <View style={styles.handle} />
@@ -194,19 +196,23 @@ export default function EditProfileModal({ visible, onClose }) {
             fullWidth
           />
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: Spacing.space2,
+    paddingTop: 64,
     paddingBottom: 0,
   },
   handle: {

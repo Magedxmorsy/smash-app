@@ -35,6 +35,11 @@ export default function JoinTeamBottomSheet({
       avoidKeyboard={false}
       animationIn="slideInUp"
       animationOut="slideOutDown"
+      coverScreen={true}
+      useNativeDriver={true}
+      statusBarTranslucent={true}
+      deviceHeight={screenHeight}
+      backdropOpacity={0.5}
     >
       <View style={[styles.container, { paddingBottom: insets.bottom + Spacing.space4 }]}>
         {/* Swipe Handle */}

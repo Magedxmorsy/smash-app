@@ -15,6 +15,7 @@ import TeamIcon from '../../../assets/icons/team.svg';
 
 export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit, onDelete, onFillDummyData, tournamentStatus }) {
   const insets = useSafeAreaInsets();
+  const screenHeight = Dimensions.get('window').height;
 
   const isTournamentFinished = tournamentStatus === 'FINISHED';
 
@@ -49,6 +50,11 @@ export default function TournamentOptionsBottomSheet({ visible, onClose, onEdit,
       avoidKeyboard={false}
       animationIn="slideInUp"
       animationOut="slideOutDown"
+      coverScreen={true}
+      useNativeDriver={true}
+      statusBarTranslucent={true}
+      deviceHeight={screenHeight}
+      backdropOpacity={0.5}
     >
       <View style={[styles.container, { paddingBottom: insets.bottom + Spacing.space1 }]}>
         {/* Swipe Handle */}
