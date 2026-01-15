@@ -234,29 +234,14 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
           // Close modal first
           setModalVisible(false);
 
-          // Then navigate to the newly created tournament in Compete tab
+          // Navigate to Compete tab to see the newly created tournament
           if (tournament?.id) {
             // Wait for modal close animation to complete before navigating
             setTimeout(() => {
-              // First get the root navigation (tab navigator)
               const rootNavigation = navigation.getParent();
               if (rootNavigation) {
-                // First switch to CompeteTab
+                // Just switch to CompeteTab - user can click the tournament to see details
                 rootNavigation.navigate('CompeteTab');
-
-                // Then push TournamentDetails onto the CompeteTab stack
-                // We need a small delay to ensure tab switch completes
-                setTimeout(() => {
-                  // Get the CompeteTab navigator
-                  const competeNav = rootNavigation.getState().routes.find(r => r.name === 'CompeteTab');
-                  if (competeNav) {
-                    rootNavigation.navigate('CompeteTab', {
-                      screen: 'TournamentDetails',
-                      params: { tournamentId: tournament.id },
-                      initial: false, // Don't reset the stack
-                    });
-                  }
-                }, 100);
               }
             }, 400);
           }
