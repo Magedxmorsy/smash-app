@@ -225,7 +225,7 @@ export default function ProfileScreen({ navigation, onCreateAccount }) {
                       <Avatar
                         key={`player1-${avatars.length}`}
                         size="small"
-                        source={team.player1.avatarSource}
+                        source={team.player1.avatarUri}
                         name={`${team.player1.firstName} ${team.player1.lastName}`}
                         withBorder={true}
                       />
@@ -236,7 +236,7 @@ export default function ProfileScreen({ navigation, onCreateAccount }) {
                       <Avatar
                         key={`player2-${avatars.length}`}
                         size="small"
-                        source={team.player2.avatarSource}
+                        source={team.player2.avatarUri}
                         name={`${team.player2.firstName} ${team.player2.lastName}`}
                         withBorder={true}
                       />
