@@ -462,7 +462,7 @@ export const completeUserProfile = async (uid, profileData) => {
 
 /**
  * Update user profile information
- * This updates an existing user's profile data
+ * This updates an existing user's profile data and propagates changes to all related documents
  */
 export const updateUserProfile = async (uid, profileData) => {
   try {
@@ -504,10 +504,214 @@ export const updateUserProfile = async (uid, profileData) => {
       });
     }
 
+    // Propagate profile changes to all tournaments where user is a participant
+    await propagateProfileChangesToTournaments(uid, firstName, lastName, avatarUrl);
+
+    // Propagate profile changes to recent notifications
+    await propagateProfileChangesToNotifications(uid, firstName, lastName, avatarUrl);
+
     return { success: true, error: null };
   } catch (error) {
     console.error('Update profile error:', error);
     return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Propagate user profile changes to all tournaments where user is a participant
+ * Updates both teams and matches arrays
+ */
+const propagateProfileChangesToTournaments = async (userId, firstName, lastName, avatarUrl) => {
+  try {
+    console.log('🔄 Propagating profile changes to tournaments for user:', userId);
+
+    // Query all tournaments
+    const tournamentsRef = collection(db, 'tournaments');
+    const tournamentsSnapshot = await getDocs(tournamentsRef);
+
+    let updateCount = 0;
+
+    for (const tournamentDoc of tournamentsSnapshot.docs) {
+      const tournamentData = tournamentDoc.data();
+      let hasChanges = false;
+      const updates = {};
+
+      // Update teams array
+      if (tournamentData.teams && Array.isArray(tournamentData.teams)) {
+        const updatedTeams = tournamentData.teams.map(team => {
+          let teamUpdated = false;
+
+          // Check and update player1
+          if (team.player1?.userId === userId) {
+            team.player1.firstName = firstName;
+            team.player1.lastName = lastName;
+            team.player1.avatarUri = avatarUrl;
+            teamUpdated = true;
+          }
+
+          // Check and update player2
+          if (team.player2?.userId === userId) {
+            team.player2.firstName = firstName;
+            team.player2.lastName = lastName;
+            team.player2.avatarUri = avatarUrl;
+            teamUpdated = true;
+          }
+
+          if (teamUpdated) hasChanges = true;
+          return team;
+        });
+
+        if (hasChanges) {
+          updates.teams = updatedTeams;
+        }
+      }
+
+      // Update matches array
+      if (tournamentData.matches && Array.isArray(tournamentData.matches)) {
+        const updatedMatches = tournamentData.matches.map(match => {
+          let matchUpdated = false;
+
+          // Update team1 players
+          if (match.team1?.player1?.userId === userId) {
+            match.team1.player1.firstName = firstName;
+            match.team1.player1.lastName = lastName;
+            match.team1.player1.avatarUri = avatarUrl;
+            matchUpdated = true;
+          }
+          if (match.team1?.player2?.userId === userId) {
+            match.team1.player2.firstName = firstName;
+            match.team1.player2.lastName = lastName;
+            match.team1.player2.avatarUri = avatarUrl;
+            matchUpdated = true;
+          }
+
+          // Update team2 players
+          if (match.team2?.player1?.userId === userId) {
+            match.team2.player1.firstName = firstName;
+            match.team2.player1.lastName = lastName;
+            match.team2.player1.avatarUri = avatarUrl;
+            matchUpdated = true;
+          }
+          if (match.team2?.player2?.userId === userId) {
+            match.team2.player2.firstName = firstName;
+            match.team2.player2.lastName = lastName;
+            match.team2.player2.avatarUri = avatarUrl;
+            matchUpdated = true;
+          }
+
+          if (matchUpdated) hasChanges = true;
+          return match;
+        });
+
+        if (hasChanges) {
+          updates.matches = updatedMatches;
+        }
+      }
+
+      // Update groups array (for GROUP_STAGE tournaments)
+      if (tournamentData.groups && Array.isArray(tournamentData.groups)) {
+        const updatedGroups = tournamentData.groups.map(group => {
+          if (group.teams && Array.isArray(group.teams)) {
+            const updatedGroupTeams = group.teams.map(team => {
+              let teamUpdated = false;
+
+              // Check and update player1
+              if (team.player1?.userId === userId) {
+                team.player1.firstName = firstName;
+                team.player1.lastName = lastName;
+                team.player1.avatarUri = avatarUrl;
+                teamUpdated = true;
+              }
+
+              // Check and update player2
+              if (team.player2?.userId === userId) {
+                team.player2.firstName = firstName;
+                team.player2.lastName = lastName;
+                team.player2.avatarUri = avatarUrl;
+                teamUpdated = true;
+              }
+
+              if (teamUpdated) hasChanges = true;
+              return team;
+            });
+
+            return { ...group, teams: updatedGroupTeams };
+          }
+          return group;
+        });
+
+        if (hasChanges) {
+          updates.groups = updatedGroups;
+        }
+      }
+
+      // Apply updates to this tournament if there were any changes
+      if (hasChanges) {
+        await updateDoc(doc(db, 'tournaments', tournamentDoc.id), updates);
+        updateCount++;
+        console.log(`✅ Updated tournament: ${tournamentDoc.id}`);
+      }
+    }
+
+    console.log(`✅ Profile propagation complete. Updated ${updateCount} tournaments.`);
+  } catch (error) {
+    console.error('❌ Error propagating profile changes to tournaments:', error);
+    // Don't throw - we don't want profile update to fail if propagation fails
+  }
+};
+
+/**
+ * Propagate user profile changes to recent notifications
+ * Updates playerInfo in the user's own notifications where they appear
+ *
+ * Note: We only update the user's own notifications due to Firestore security rules.
+ * Notifications in other users' collections will show stale data, but this is acceptable
+ * since notifications are typically ephemeral and less critical than tournament data.
+ */
+const propagateProfileChangesToNotifications = async (userId, firstName, lastName, avatarUrl) => {
+  try {
+    console.log('🔄 Propagating profile changes to user notifications:', userId);
+
+    // Only update the current user's own notifications
+    // This avoids permission issues with other users' notification subcollections
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+
+    // Query for notifications that have playerInfo (where this user might appear)
+    const notificationsQuery = query(
+      notificationsRef,
+      where('playerInfo.firstName', '!=', null)
+    );
+
+    const notificationsSnapshot = await getDocs(notificationsQuery);
+    let notificationUpdateCount = 0;
+
+    // Date threshold: 30 days ago (only update recent notifications)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    for (const notificationDoc of notificationsSnapshot.docs) {
+      const notificationData = notificationDoc.data();
+
+      if (notificationData.playerInfo) {
+        const createdAt = new Date(notificationData.createdAt);
+        const isRecent = createdAt >= thirtyDaysAgo;
+
+        // Update if notification is recent and avatar doesn't match
+        if (isRecent && notificationData.playerInfo.avatarUri !== avatarUrl) {
+          await updateDoc(doc(db, 'users', userId, 'notifications', notificationDoc.id), {
+            'playerInfo.firstName': firstName,
+            'playerInfo.lastName': lastName,
+            'playerInfo.avatarUri': avatarUrl,
+          });
+          notificationUpdateCount++;
+        }
+      }
+    }
+
+    console.log(`✅ Notification propagation complete. Updated ${notificationUpdateCount} notifications.`);
+  } catch (error) {
+    console.error('❌ Error propagating profile changes to notifications:', error);
+    // Don't throw - we don't want profile update to fail if propagation fails
   }
 };
 
@@ -667,5 +871,165 @@ export const checkEmailVerificationStatus = async () => {
   } catch (error) {
     console.error('Check email verification error:', error);
     return { verified: false, error: error.message };
+  }
+};
+
+/**
+ * Delete user account
+ * Requires reauthentication for security
+ * Deletes all user data from Firestore and Firebase Auth
+ */
+export const deleteAccount = async (currentPassword) => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user || !user.email) {
+      return { success: false, error: 'No user logged in' };
+    }
+
+    console.log('🗑️ Starting account deletion process for user:', user.uid);
+
+    // Step 1: Reauthenticate user for security
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      console.log('✅ User reauthenticated successfully');
+    } catch (reauthError) {
+      console.error('❌ Reauthentication failed:', reauthError);
+      if (reauthError.code === 'auth/wrong-password') {
+        return { success: false, error: 'Incorrect password. Please try again.' };
+      }
+      return { success: false, error: 'Authentication failed. Please try again.' };
+    }
+
+    const userId = user.uid;
+
+    // Step 2: Delete user's notifications subcollection
+    try {
+      const notificationsRef = collection(db, 'users', userId, 'notifications');
+      const notificationsSnapshot = await getDocs(notificationsRef);
+
+      console.log(`🗑️ Deleting ${notificationsSnapshot.size} notifications...`);
+
+      const deleteNotificationsPromises = notificationsSnapshot.docs.map(doc =>
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(deleteNotificationsPromises);
+
+      console.log('✅ Notifications deleted');
+    } catch (notifError) {
+      console.error('⚠️ Error deleting notifications (continuing):', notifError);
+      // Continue even if notifications deletion fails
+    }
+
+    // Step 3: Handle tournaments - delete hosted ones and remove user from participated ones
+    try {
+      const tournamentsRef = collection(db, 'tournaments');
+
+      // First, delete all tournaments hosted by this user
+      const hostedTournamentsQuery = query(
+        tournamentsRef,
+        where('hostId', '==', userId)
+      );
+      const hostedTournamentsSnapshot = await getDocs(hostedTournamentsQuery);
+
+      console.log(`🗑️ Deleting ${hostedTournamentsSnapshot.size} hosted tournaments...`);
+
+      const deleteTournamentPromises = hostedTournamentsSnapshot.docs.map(doc =>
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(deleteTournamentPromises);
+
+      console.log('✅ Hosted tournaments deleted');
+
+      // Then, remove user from tournaments where they're just a participant
+      const participantTournamentsQuery = query(
+        tournamentsRef,
+        where('participantIds', 'array-contains', userId)
+      );
+      const participantTournamentsSnapshot = await getDocs(participantTournamentsQuery);
+
+      console.log(`🗑️ Removing user from ${participantTournamentsSnapshot.size} tournaments as participant...`);
+
+      for (const tournamentDoc of participantTournamentsSnapshot.docs) {
+        const tournamentData = tournamentDoc.data();
+
+        // Skip if this is a hosted tournament (already deleted)
+        if (tournamentData.hostId === userId) {
+          continue;
+        }
+
+        // Remove user from teams
+        const updatedTeams = tournamentData.teams?.map(team => {
+          const newTeam = { ...team };
+
+          // Remove from player1 position
+          if (team.player1?.userId === userId) {
+            newTeam.player1 = null;
+          }
+
+          // Remove from player2 position
+          if (team.player2?.userId === userId) {
+            newTeam.player2 = null;
+          }
+
+          return newTeam;
+        }).filter(team => team.player1 !== null || team.player2 !== null) || []; // Remove empty teams
+
+        // Remove user from participantIds
+        const updatedParticipantIds = tournamentData.participantIds?.filter(
+          id => id !== userId
+        ) || [];
+
+        // Recalculate registered teams
+        const registeredTeams = updatedTeams.filter(
+          team => team.player1 && team.player2
+        ).length;
+
+        // Update tournament
+        await updateDoc(tournamentDoc.ref, {
+          teams: updatedTeams,
+          participantIds: updatedParticipantIds,
+          registeredTeams,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      console.log('✅ User removed from tournaments');
+    } catch (tournamentsError) {
+      console.error('⚠️ Error handling tournaments (continuing):', tournamentsError);
+      // Continue even if tournament cleanup fails
+    }
+
+    // Step 4: Delete user document from Firestore
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+      console.log('✅ User document deleted from Firestore');
+    } catch (firestoreError) {
+      console.error('⚠️ Error deleting user document:', firestoreError);
+      // Continue to delete auth account even if Firestore fails
+    }
+
+    // Step 5: Delete Firebase Auth account
+    try {
+      await deleteUser(user);
+      console.log('✅ Firebase Auth account deleted');
+    } catch (authError) {
+      console.error('❌ Error deleting auth account:', authError);
+      return {
+        success: false,
+        error: 'Failed to delete account. Please try again or contact support.'
+      };
+    }
+
+    console.log('✅ Account deletion completed successfully');
+    return { success: true, error: null };
+
+  } catch (error) {
+    console.error('❌ Delete account error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to delete account. Please try again.'
+    };
   }
 };

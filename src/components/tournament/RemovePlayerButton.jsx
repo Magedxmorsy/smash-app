@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import CloseDarkIcon from '../../../assets/icons/closedark.svg';
+import { Colors } from '../../constants/Colors';
 
 export default function RemovePlayerButton({
   onPress,
@@ -31,7 +32,7 @@ export default function RemovePlayerButton({
       activeOpacity={0.7}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <CloseDarkIcon width={size} height={size} />
+      <CloseDarkIcon width={size} height={size} color={Colors.error} />
     </TouchableOpacity>
   );
 }

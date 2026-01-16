@@ -123,18 +123,19 @@ export default function TournamentCard({
       emptyStateText = "No players yet";
       emptyStateSubtext = isHost ? "Share to invite friends" : "Be the first to join";
     } else if (isHost) {
-      if (totalPlayers === 0) {
-        showAvatars = false;
-        emptyStateText = "No players yet";
+      // If there are avatars but no complete teams (totalPlayers === 0),
+      // it means the host is the only player (incomplete team)
+      if (avatars.length > 0 && totalPlayers === 0) {
+        showAvatars = true; // Show the avatar(s)
+        emptyStateText = avatars.length === 1 ? "You are the only player" : "Looking for more players";
         emptyStateSubtext = "Share to invite friends";
       } else if (totalPlayers === 2 && !isMoreThanHalf) {
-        // Host joined but is the only player (1 team = 2 players, but host is only 1)
-        // This means host joined solo without a partner
+        // One complete team but not more than half full
         showAvatars = true; // Show the host avatar
         emptyStateText = "You are the only player";
         emptyStateSubtext = "Share to invite friends";
       } else if (registeredCount === 1 && !isMoreThanHalf) {
-        showAvatars = false;
+        showAvatars = true; // Changed from false to show avatars
         emptyStateText = "Share to invite friends";
         emptyStateSubtext = "Share to invite friends";
       }

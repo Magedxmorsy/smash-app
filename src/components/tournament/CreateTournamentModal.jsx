@@ -1,9 +1,9 @@
-import { Modal, View, StyleSheet, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import Modal from 'react-native-modal';
 import TournamentFormNavigator from '../../navigation/TournamentFormNavigator';
 import { TournamentFormProvider } from '../../contexts/TournamentFormContext';
 import { Colors } from '../../constants/Colors';
-import { Spacing } from '../../constants/Spacing';
+import { Spacing, BorderRadius } from '../../constants/Spacing';
 
 export default function CreateTournamentModal({
   visible,
@@ -12,6 +12,8 @@ export default function CreateTournamentModal({
   editMode = false,
   tournament = null
 }) {
+  const screenHeight = Dimensions.get('window').height;
+
   console.log('🔧 [MODAL COMPONENT] CreateTournamentModal render', {
     visible,
     editMode,
@@ -21,16 +23,23 @@ export default function CreateTournamentModal({
 
   return (
     <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
+      isVisible={visible}
+      onBackdropPress={() => {}} // Disable backdrop press
+      swipeDirection={null} // Disable swipe to dismiss
+      style={styles.modal}
+      propagateSwipe={false}
+      avoidKeyboard={false}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      coverScreen={true}
+      useNativeDriver={true}
       statusBarTranslucent={true}
+      deviceHeight={screenHeight}
+      backdropOpacity={0.5}
     >
-      <View style={styles.backdrop} />
-      <View style={styles.container}>
+      <View style={[styles.container, { height: screenHeight * 0.93 }]}>
         {/* Swipe Handle */}
-        <View style={styles.handleContainer} pointerEvents="none">
+        <View style={styles.handleContainer}>
           <View style={styles.handle} />
         </View>
 
@@ -49,17 +58,19 @@ export default function CreateTournamentModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modal: {
+    justifyContent: 'flex-end',
+    margin: 0,
   },
   container: {
-    flex: 1,
     backgroundColor: Colors.background,
+    borderTopLeftRadius: BorderRadius.radius6,
+    borderTopRightRadius: BorderRadius.radius6,
+    paddingTop: Spacing.space2,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: 64,
+    paddingTop: Spacing.space2,
     paddingBottom: 0,
   },
   handle: {

@@ -12,6 +12,7 @@ import Banner from '../../components/ui/Banner';
 import { useTournamentForm } from '../../contexts/TournamentFormContext';
 import { useTournaments } from '../../contexts/TournamentContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Spacing } from '../../constants/Spacing';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -28,6 +29,7 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
   const insets = useSafeAreaInsets();
   const { createTournament, updateTournament } = useTournaments();
   const { showToast } = useToast();
+  const { userData } = useAuth();
 
   const {
     tournamentName,
@@ -108,8 +110,11 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
   };
 
   const handleCreate = async () => {
+    console.log('🚀 handleCreate called', { editMode, tournamentId: tournament?.id });
+
     // Validate all required fields
     if (!validateForm()) {
+      console.log('❌ Validation failed');
       return;
     }
 
@@ -166,9 +171,75 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
           }
         }
 
+        // Handle joinAsPlayer toggle - add/remove host from teams
+        const wasJoinedAsPlayer = tournament.joinAsPlayer === true;
+        const isNowJoinedAsPlayer = tournamentData.joinAsPlayer === true;
+
+        console.log('🔄 JoinAsPlayer toggle check:', {
+          wasJoinedAsPlayer,
+          isNowJoinedAsPlayer,
+          currentTeamsLength: (tournament.teams || []).length,
+          userId: userData?.uid
+        });
+
+        // Check if host toggled joinAsPlayer from false to true
+        if (!wasJoinedAsPlayer && isNowJoinedAsPlayer) {
+          // Host wants to join - add them to teams array
+          const currentTeams = tournament.teams || [];
+          const hostAlreadyInTeam = currentTeams.some(team =>
+            team.player1?.userId === userData?.uid || team.player2?.userId === userData?.uid
+          );
+
+          console.log('✅ Host toggled joinAsPlayer to true', {
+            hostAlreadyInTeam,
+            currentTeamsLength: currentTeams.length
+          });
+
+          if (!hostAlreadyInTeam && userData) {
+            // Add host as a new team
+            const newTeam = {
+              player1: {
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                avatarUri: userData.avatarUri || null,
+                userId: userData.uid,
+              },
+              player2: null,
+              isAdminTeam: true,
+            };
+
+            const updatedTeams = [...currentTeams, newTeam];
+
+            // Only add to participantIds if not already present
+            const currentParticipantIds = tournament.participantIds || [];
+            const updatedParticipantIds = currentParticipantIds.includes(userData.uid)
+              ? currentParticipantIds
+              : [...currentParticipantIds, userData.uid];
+
+            tournamentData.teams = updatedTeams;
+            tournamentData.participantIds = updatedParticipantIds;
+            tournamentData.registeredTeams = updatedTeams.filter(t => t.player1 && t.player2).length;
+
+            console.log('📝 Adding host to tournament:', {
+              newTeamsLength: updatedTeams.length,
+              participantIdsLength: updatedParticipantIds.length,
+              newTeam
+            });
+          }
+        }
+
         // Update existing tournament
-        updateTournament(tournament.id, tournamentData);
+        console.log('💾 Updating tournament with data:', {
+          tournamentId: tournament.id,
+          hasTeams: !!tournamentData.teams,
+          teamsLength: tournamentData.teams?.length,
+          joinAsPlayer: tournamentData.joinAsPlayer
+        });
+
+        await updateTournament(tournament.id, tournamentData);
         resultTournament = { ...tournament, ...tournamentData };
+
+        console.log('✅ Tournament update complete');
 
         // Send notifications if needed
         if (shouldNotifyPlayers) {
@@ -187,13 +258,13 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         showToast('Tournament created successfully', 'success');
       }
 
-      // Notify parent
+      // Notify parent (which will handle closing the modal in edit mode)
       if (onSave) {
         onSave(resultTournament);
       }
 
-      // Close modal (only for edit mode - create mode navigation handled by parent)
-      if (editMode && onClose) {
+      // Close modal only for create mode (edit mode closing is handled by parent's onSave callback)
+      if (!editMode && onClose) {
         onClose();
       }
     } catch (error) {
@@ -249,7 +320,7 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     <View style={styles.wrapper}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.container, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[styles.container, { paddingBottom: Spacing.space24 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -491,13 +562,14 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
 
       </ScrollView>
 
-      {/* Sticky Button */}
-      <View style={[styles.stickyButton, { paddingBottom: Spacing.space1 + insets.bottom }]}>
+      {/* Floating CTA Button */}
+      <View style={[styles.floatingButtonContainer, { paddingBottom: insets.bottom }]}>
         <Button
-          title={isCreating ? (editMode ? "Saving..." : "Creating...") : (editMode ? "Save changes" : "Create tournament")}
+          title={editMode ? 'Save' : 'Create'}
           onPress={handleCreate}
-          variant="primary"
           disabled={isCreating}
+          loading={isCreating}
+          fullWidth
         />
       </View>
     </View>
@@ -518,14 +590,6 @@ const styles = StyleSheet.create({
   },
   bannerContainer: {
     marginBottom: Spacing.space2, // 8px
-  },
-  stickyButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: Spacing.space4,
-    backgroundColor: Colors.background,
   },
   pickerContainer: {
     paddingVertical: Spacing.space2,
@@ -574,5 +638,12 @@ const styles = StyleSheet.create({
     width: 0,
     height: 0,
     opacity: 0,
+  },
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.space4,
   },
 });

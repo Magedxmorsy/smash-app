@@ -213,17 +213,26 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
 
   // Generate teams based on tournament data
   const generateTeams = () => {
-    // If tournament already has teams data, use it
-    if (tournament.teams && Array.isArray(tournament.teams) && tournament.teams.length > 0) {
-      return tournament.teams;
+    // If tournament already has teams data (even if empty array), use it as-is
+    // This ensures we don't re-add players who were removed
+    if (tournament.teams && Array.isArray(tournament.teams)) {
+      // If we have teams in Firestore, return them directly
+      if (tournament.teams.length > 0) {
+        return tournament.teams;
+      }
+      // If teams array is empty, return empty array
+      // Don't try to regenerate based on joinAsPlayer flag
+      return [];
     }
 
-    // Otherwise generate teams dynamically
+    // Only generate teams dynamically if tournament.teams doesn't exist at all
+    // (e.g., old tournaments created before teams field was added)
     const teamCount = tournament.teamCount || 8;
     const teams = [];
 
-    // If tournament has joinAsPlayer flag and user data exists, add user to first team
-    if (tournament.joinAsPlayer && userData) {
+    // ONLY add user if joinAsPlayer is explicitly true AND teams field doesn't exist
+    // This prevents re-adding removed players
+    if (tournament.joinAsPlayer && userData && !tournament.teams) {
       const player1Data = {
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -410,9 +419,20 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       // Add new team to teams array
       const updatedTeams = [...currentTeams, newTeam];
 
+      // Update participantIds array - add current user if not already present
+      const currentParticipantIds = tournament.participantIds || [];
+      const updatedParticipantIds = currentParticipantIds.includes(userData.uid)
+        ? currentParticipantIds
+        : [...currentParticipantIds, userData.uid];
+
+      // Recalculate registered teams count (complete teams with both players)
+      const registeredTeams = updatedTeams.filter(t => t.player1 && t.player2).length;
+
       // Update tournament in Firebase
       await updateTournament(tournament.id, {
         teams: updatedTeams,
+        participantIds: updatedParticipantIds,
+        registeredTeams,
       });
 
       console.log('Team created successfully!');
@@ -462,9 +482,20 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         player2: player2Data,
       };
 
+      // Update participantIds array - add current user if not already present
+      const currentParticipantIds = tournament.participantIds || [];
+      const updatedParticipantIds = currentParticipantIds.includes(userData.uid)
+        ? currentParticipantIds
+        : [...currentParticipantIds, userData.uid];
+
+      // Recalculate registered teams count (complete teams with both players)
+      const registeredTeams = updatedTeams.filter(t => t.player1 && t.player2).length;
+
       // Update tournament in Firebase
       await updateTournament(tournament.id, {
         teams: updatedTeams,
+        participantIds: updatedParticipantIds,
+        registeredTeams,
       });
 
       // Send notification
@@ -568,6 +599,9 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
     // The tournament context has already been updated
     // Just close the modal - the UI will re-render with new data
     console.log('Tournament updated:', updatedTournament);
+
+    // Close the edit modal
+    setShowEditModal(false);
   };
 
   const generateGroups = (teams) => {
@@ -1710,7 +1744,7 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
 
       {/* Edit Tournament Modal */}
       <CreateTournamentModal
-        key={`edit-modal-${tournament?.id}-${showEditModal}`}
+        key={`edit-modal-${tournament?.id}`}
         visible={showEditModal}
         onClose={() => setShowEditModal(false)}
         onTournamentCreated={handleTournamentUpdated}

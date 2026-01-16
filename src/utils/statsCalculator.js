@@ -24,34 +24,34 @@ export const calculatePlayerStats = (tournaments, userId) => {
   let matchesPlayed = 0;
 
   tournaments.forEach(tournament => {
-    // Check if user participated in this tournament
+    // Check if user participated in this tournament using participantIds (authoritative source)
+    const isParticipant = tournament.participantIds?.includes(userId);
+
+    if (!isParticipant) {
+      return; // User not in this tournament
+    }
+
+    // Count tournament as played if user is a participant
+    tournamentsPlayed++;
+
+    // Find user's team for match calculations
     const userTeam = tournament.teams?.find(team =>
       team.player1?.userId === userId || team.player2?.userId === userId
     );
 
-    if (!userTeam) {
-      return; // User not in this tournament
-    }
-
-    // Count tournament as played if user is in a team
-    tournamentsPlayed++;
-
     // Count trophies won (tournaments where user won)
-    if (tournament.status === 'COMPLETED' && tournament.winnerId) {
-      // Check if user's team won
-      if (userTeam.player1?.userId === userId || userTeam.player2?.userId === userId) {
-        // Find if this team is the winner
-        const winnerTeam = tournament.teams?.find(team =>
-          (team.player1?.userId === tournament.winnerId || team.player2?.userId === tournament.winnerId)
-        );
-        if (winnerTeam === userTeam) {
-          trophiesWon++;
-        }
+    if (tournament.status === 'COMPLETED' && tournament.winnerId && userTeam) {
+      // Find if this team is the winner
+      const winnerTeam = tournament.teams?.find(team =>
+        (team.player1?.userId === tournament.winnerId || team.player2?.userId === tournament.winnerId)
+      );
+      if (winnerTeam === userTeam) {
+        trophiesWon++;
       }
     }
 
-    // Count matches played and won
-    if (tournament.matches && Array.isArray(tournament.matches)) {
+    // Count matches played and won (only if user's team exists)
+    if (userTeam && tournament.matches && Array.isArray(tournament.matches)) {
       tournament.matches.forEach(match => {
         // Check if user participated in this match
         const userInLeftTeam = match.leftTeam?.player1?.userId === userId || match.leftTeam?.player2?.userId === userId;

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Modal, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ScrollView, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import Avatar from '../ui/Avatar';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import LinkButton from '../ui/LinkButton';
-import { Spacing, BorderRadius } from '../../constants/Spacing';
+import { Spacing } from '../../constants/Spacing';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
@@ -20,6 +20,7 @@ export default function EditProfileModal({ visible, onClose }) {
   const [lastName, setLastName] = useState('');
   const [avatarUri, setAvatarUri] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Pre-fill form with current user data when modal opens
   useEffect(() => {
@@ -124,14 +125,14 @@ export default function EditProfileModal({ visible, onClose }) {
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
+      transparent={Platform.OS === 'android'}
       onRequestClose={onClose}
-      statusBarTranslucent={true}
     >
-      <View style={styles.backdrop} />
+      {Platform.OS === 'android' && <View style={styles.backdrop} />}
       <View style={styles.container}>
         {/* Swipe Handle */}
-        <View style={styles.handleContainer} pointerEvents="none">
+        <View style={styles.handleContainer}>
           <View style={styles.handle} />
         </View>
 
@@ -187,7 +188,7 @@ export default function EditProfileModal({ visible, onClose }) {
         </ScrollView>
 
         {/* Save Button */}
-        <View style={styles.buttonContainer}>
+        <View style={[styles.buttonContainer, { paddingBottom: insets.bottom }]}>
           <Button
             title="Save changes"
             onPress={handleSave}
@@ -209,10 +210,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.space4,
+    paddingTop: Spacing.space2,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: 64,
+    paddingTop: Spacing.space2,
     paddingBottom: 0,
   },
   handle: {
@@ -227,6 +230,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.space2,
+    marginHorizontal: -Spacing.space4,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -246,7 +250,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.space4,
+    paddingTop: Spacing.space4,
+    paddingBottom: Spacing.space2,
   },
   avatarSection: {
     alignItems: 'center',
@@ -259,7 +264,6 @@ const styles = StyleSheet.create({
     gap: Spacing.space4,
   },
   buttonContainer: {
-    padding: Spacing.space4,
-    paddingBottom: Spacing.space4 + 20,
+    paddingTop: Spacing.space4,
   },
 });

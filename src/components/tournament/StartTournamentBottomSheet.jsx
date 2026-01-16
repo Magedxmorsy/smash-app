@@ -240,7 +240,7 @@ export default function StartTournamentBottomSheet({
         )}
 
         {/* Footer with Buttons */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.space3 }]}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
           {modalState === 'preview' && (
             <Button
               title="Generate groups"

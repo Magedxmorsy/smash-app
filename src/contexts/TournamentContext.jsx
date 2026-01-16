@@ -68,7 +68,7 @@ export const TournamentProvider = ({ children }) => {
       hostId: userData?.uid,
       hostName: userData ? `${userData.firstName} ${userData.lastName}` : 'Unknown',
       status: 'REGISTRATION',
-      registeredTeams: tournamentData.joinAsPlayer ? 1 : 0,
+      registeredTeams: 0, // Always 0 initially - only complete teams (player1 + player2) count
       participantIds: tournamentData.joinAsPlayer ? [userData?.uid] : [],
       teams: tournamentData.joinAsPlayer ? [
         {
@@ -294,6 +294,8 @@ export const TournamentProvider = ({ children }) => {
    * - If the player is alone on the team, deletes the entire team
    * - If the team has 2 players, sets the player position to null
    * - Recalculates registeredTeams count
+   * - Updates participantIds to remove the player
+   * - Clears joinAsPlayer flag if all teams are removed
    */
   const removePlayerFromTeam = async (tournamentId, teamIndex, playerPosition) => {
     try {
@@ -308,6 +310,10 @@ export const TournamentProvider = ({ children }) => {
       if (!team || !team[playerPosition]) {
         return { success: false, error: 'Player not found' };
       }
+
+      // Get the player being removed
+      const removedPlayer = team[playerPosition];
+      const removedPlayerId = removedPlayer?.userId;
 
       // Check if this is the only player on the team
       const otherPosition = playerPosition === 'player1' ? 'player2' : 'player1';
@@ -335,11 +341,27 @@ export const TournamentProvider = ({ children }) => {
         team => team.player1 && team.player2
       ).length;
 
-      // Update tournament in Firestore
-      await updateDocument('tournaments', tournamentId, {
+      // Update participantIds - remove the player who was removed
+      let updatedParticipantIds = tournament.participantIds || [];
+      if (removedPlayerId) {
+        updatedParticipantIds = updatedParticipantIds.filter(id => id !== removedPlayerId);
+      }
+
+      // Prepare updates object
+      const updates = {
         teams: updatedTeams,
-        registeredTeams
-      });
+        registeredTeams,
+        participantIds: updatedParticipantIds
+      };
+
+      // If all teams are removed, clear the joinAsPlayer flag
+      // This prevents the UI from re-adding the player based on stale flag
+      if (updatedTeams.length === 0) {
+        updates.joinAsPlayer = false;
+      }
+
+      // Update tournament in Firestore
+      await updateDocument('tournaments', tournamentId, updates);
 
       return { success: true };
     } catch (error) {

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { signUp, signIn, logOut, getCurrentUser, onAuthChange, getUserData, updateUserProfile } from '../services/authService';
+import { signUp, signIn, logOut, getCurrentUser, onAuthChange, getUserData, updateUserProfile, deleteAccount } from '../services/authService';
 
 const AuthContext = createContext({});
 
@@ -96,6 +96,16 @@ export const AuthProvider = ({ children }) => {
     return { success: false, error: 'No user logged in' };
   };
 
+  const handleDeleteAccount = async (currentPassword) => {
+    const result = await deleteAccount(currentPassword);
+    if (result.success) {
+      // Clear local state after successful deletion
+      setUser(null);
+      setUserData(null);
+    }
+    return result;
+  };
+
   // Use dummy user data when not authenticated for testing purposes
   const effectiveUserData = userData || {
     uid: 'dummy-user-id',
@@ -114,6 +124,7 @@ export const AuthProvider = ({ children }) => {
     logOut: handleLogOut,
     refreshUserData,
     updateUserData,
+    deleteAccount: handleDeleteAccount,
     isAuthenticated: !!user,
     isEmailVerified: user?.emailVerified || false,
     setIsSigningUp,

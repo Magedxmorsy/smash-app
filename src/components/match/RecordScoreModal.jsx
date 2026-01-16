@@ -255,7 +255,7 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
           </KeyboardAwareScrollView>
 
           {/* Save Button - Fixed above keyboard */}
-          <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.space3 }]}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
             <Button
               title="Save"
               variant="accent"

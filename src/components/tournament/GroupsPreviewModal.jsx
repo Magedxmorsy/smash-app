@@ -98,7 +98,7 @@ export default function GroupsPreviewModal({ visible, onClose, groups, onConfirm
         )}
 
         {/* Footer with Buttons */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.space3 }]}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
           <Button
             title="Confirm & start"
             variant="accent"

@@ -45,7 +45,7 @@ export default function FullScreenModal({
       backdropOpacity={0.4}
       statusBarTranslucent={true}
     >
-      <View style={[styles.container, { height: screenHeight * 0.95, paddingTop: title ? insets.top : 0 }]}>
+      <View style={[styles.container, { height: screenHeight * 0.93, paddingTop: title ? insets.top : 0 }]}>
         {/* Swipe Handle - only show if title is provided */}
         {title && (
           <View style={styles.handleContainer}>

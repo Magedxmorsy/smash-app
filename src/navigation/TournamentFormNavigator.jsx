@@ -10,7 +10,6 @@ import FormatFormScreen from '../screens/tournament/FormatFormScreen';
 import ChevronLeftIcon from '../../assets/icons/chevronleft.svg';
 import CloseIcon from '../../assets/icons/close.svg';
 import CheckIcon from '../../assets/icons/check.svg';
-import { useTournamentForm } from '../contexts/TournamentFormContext';
 
 export default function TournamentFormNavigator({ editMode, onSave, onClose, tournament, showHandle = true }) {
   const [currentPage, setCurrentPage] = useState('main');
@@ -131,6 +130,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  headerActionText: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+  },
+  headerActionTextDisabled: {
+    color: Colors.neutral300,
   },
   pageContainer: {
     flex: 1,
