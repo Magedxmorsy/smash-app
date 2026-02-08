@@ -53,8 +53,10 @@ service cloud.firestore {
 
     // Tournaments collection
     match /tournaments/{tournamentId} {
-      // Anyone authenticated can read tournaments
-      allow read: if request.auth != null;
+      // Anyone can see a specific tournament (needed for deep link invites)
+      allow get: if true;
+      // Listing all tournaments still requires authentication
+      allow list: if request.auth != null;
 
       // Any authenticated user can create tournaments
       allow create: if request.auth != null;
