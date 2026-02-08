@@ -30,20 +30,13 @@ const linking = {
   prefixes: [Linking.createURL('/'), 'smash://', 'https://getsmash.net', 'https://www.getsmash.net'],
   config: {
     screens: {
-      CompeteTab: {
-        path: '',
-        screens: {
-          TournamentDetails: 'tournament/:tournamentId',
-          CompeteList: 'compete',
-        },
-      },
-      HomeTab: {
-        path: '',
-        screens: {
-          MatchDetails: 'match/:matchId',
-          HomeList: 'home',
-        },
-      },
+      // Global direct paths
+      TournamentDetails: 'tournament/:tournamentId',
+      MatchDetails: 'match/:matchId',
+
+      // Tab base paths
+      HomeTab: 'home',
+      CompeteTab: 'compete',
       UpdatesTab: 'updates',
       ProfileTab: 'profile',
     },
