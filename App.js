@@ -27,26 +27,29 @@ const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
 // Deep linking configuration
 const linking = {
-  prefixes: ['smash://', 'https://getsmash.net', 'https://www.getsmash.net', 'https://getsmash.net/', 'https://www.getsmash.net/'],
+  prefixes: ['smash://', 'https://getsmash.net', 'https://www.getsmash.net'],
   config: {
     screens: {
       HomeTab: {
+        path: '',
         screens: {
           HomeList: 'home',
-          MatchDetails: '/match/:matchId',
+          MatchDetails: 'match/:matchId',
         },
       },
       CompeteTab: {
+        path: '',
         screens: {
           CompeteList: 'compete',
-          TournamentDetails: '/tournament/:tournamentId',
+          TournamentDetails: 'tournament/:tournamentId',
         },
       },
       UpdatesTab: 'updates',
       ProfileTab: {
+        path: '',
         screens: {
           ProfileList: 'profile',
-          TournamentDetails: '/tournament/:tournamentId',
+          TournamentDetails: 'tournament/:tournamentId',
         },
       },
     },
