@@ -103,6 +103,28 @@ export function getSchedulingSummary(
 }
 
 /**
+ * Calculate the total duration of a round based on number of matches and courts
+ * This prevents court conflicts by accounting for matches that must wait for courts
+ *
+ * @param {number} matchCount - Number of matches in the round
+ * @param {number} courtCount - Number of available courts
+ * @param {number} matchDuration - Duration of each match in minutes (default: 30)
+ * @param {number} bufferTime - Buffer time between matches in minutes (default: 15)
+ * @returns {number} Total duration in minutes
+ *
+ * @example
+ * // 4 matches, 3 courts: needs 2 time slots
+ * calculateRoundDuration(4, 3, 30, 15) // 90 minutes (2 slots × 45 min)
+ *
+ * // 4 matches, 4 courts: needs 1 time slot
+ * calculateRoundDuration(4, 4, 30, 15) // 45 minutes (1 slot × 45 min)
+ */
+export function calculateRoundDuration(matchCount, courtCount, matchDuration = 30, bufferTime = 15) {
+  const timeSlotsNeeded = Math.ceil(matchCount / courtCount);
+  return timeSlotsNeeded * (matchDuration + bufferTime);
+}
+
+/**
  * Parse courts from user input
  * Supports formats: "1,2,3" or "Court 1, Court 2" or "1-4"
  *

@@ -33,12 +33,11 @@ export default function GroupsPreviewModal({ visible, onClose, groups, onConfirm
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
-      transparent={Platform.OS === 'android'}
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      {Platform.OS === 'android' && <View style={styles.backdrop} />}
-      <View style={styles.container}>
+      <View style={styles.modalWrapper}>
+        <View style={styles.container}>
         {/* Swipe Indicator */}
         <View style={styles.swipeIndicator} />
 
@@ -98,7 +97,7 @@ export default function GroupsPreviewModal({ visible, onClose, groups, onConfirm
         )}
 
         {/* Footer with Buttons */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 24 : 0) }]}>
           <Button
             title="Confirm & start"
             variant="accent"
@@ -114,19 +113,32 @@ export default function GroupsPreviewModal({ visible, onClose, groups, onConfirm
             disabled={isRegenerating}
           />
         </View>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modalWrapper: {
+    flex: 1,
+    ...Platform.select({
+      android: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent backdrop
+        justifyContent: 'flex-end',
+      },
+    }),
   },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    ...Platform.select({
+      android: {
+        borderTopLeftRadius: BorderRadius.radius6,
+        borderTopRightRadius: BorderRadius.radius6,
+        overflow: 'hidden',
+      },
+    }),
   },
   swipeIndicator: {
     width: 40,
@@ -211,5 +223,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.space4,
     paddingVertical: Spacing.space3,
     gap: Spacing.space2,
+    paddingBottom: Platform.OS === 'android' ? 24 : Spacing.space3,
   },
 });

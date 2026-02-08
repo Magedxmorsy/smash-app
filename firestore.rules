@@ -79,6 +79,18 @@ service cloud.firestore {
                       resource.data.hostId == request.auth.uid;
     }
 
+    // Feedback collection - users can submit feedback
+    match /feedback/{feedbackId} {
+      // Any authenticated user can submit feedback
+      allow create: if request.auth != null;
+
+      // No one can read feedback (admin reads via Firebase Console)
+      allow read: if false;
+
+      // No one can update or delete feedback
+      allow update, delete: if false;
+    }
+
     // Default: deny all other access for security
     match /{document=**} {
       allow read, write: if false;

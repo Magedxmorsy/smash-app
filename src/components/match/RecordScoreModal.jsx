@@ -4,7 +4,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { Spacing } from '../../constants/Spacing';
+import { Spacing, BorderRadius } from '../../constants/Spacing';
 import Button from '../ui/Button';
 import Avatar from '../ui/Avatar';
 import Card from '../ui/Card';
@@ -143,33 +143,32 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
-      transparent={Platform.OS === 'android'}
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      {Platform.OS === 'android' && <View style={styles.backdrop} />}
-      <View style={styles.container}>
-        {/* Swipe Indicator */}
-        <View style={styles.swipeIndicator} />
+      <View style={styles.modalWrapper}>
+        <View style={styles.container}>
+          {/* Swipe Indicator */}
+          <View style={styles.swipeIndicator} />
 
-        {/* Header with Close Button */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <CloseIcon width={32} height={32} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Record match score</Text>
-          <View style={styles.closeButton} />
-        </View>
+          {/* Header with Close Button */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <CloseIcon width={32} height={32} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Record match score</Text>
+            <View style={styles.closeButton} />
+          </View>
 
-        <KeyboardAwareScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          enableOnAndroid={true}
-          extraScrollHeight={20}
-        >
-          <Card style={styles.card}>
+          <KeyboardAwareScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            enableOnAndroid={true}
+            extraScrollHeight={20}
+          >
+            <Card style={styles.card}>
               {/* Team A Section */}
               <View style={styles.teamSection}>
                 <View style={styles.teamRow}>
@@ -179,10 +178,12 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
                     <View style={styles.avatarsContainer}>
                       <Avatar
                         size="small"
+                        source={teamA.player1.avatarUri}
                         name={`${teamA.player1.firstName} ${teamA.player1.lastName}`}
                       />
                       <Avatar
                         size="small"
+                        source={teamA.player2.avatarUri}
                         name={`${teamA.player2.firstName} ${teamA.player2.lastName}`}
                       />
                     </View>
@@ -220,10 +221,12 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
                     <View style={styles.avatarsContainer}>
                       <Avatar
                         size="small"
+                        source={teamB.player1.avatarUri}
                         name={`${teamB.player1.firstName} ${teamB.player1.lastName}`}
                       />
                       <Avatar
                         size="small"
+                        source={teamB.player2.avatarUri}
                         name={`${teamB.player2.firstName} ${teamB.player2.lastName}`}
                       />
                     </View>
@@ -255,7 +258,7 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
           </KeyboardAwareScrollView>
 
           {/* Save Button - Fixed above keyboard */}
-          <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 24 : 0) }]}>
             <Button
               title="Save"
               variant="accent"
@@ -263,19 +266,32 @@ export default function RecordScoreModal({ visible, onClose, match, onSave }) {
               onPress={handleSave}
             />
           </View>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modalWrapper: {
+    flex: 1,
+    ...Platform.select({
+      android: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent backdrop
+        justifyContent: 'flex-end',
+      },
+    }),
   },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    ...Platform.select({
+      android: {
+        borderTopLeftRadius: BorderRadius.radius6,
+        borderTopRightRadius: BorderRadius.radius6,
+        overflow: 'hidden',
+      },
+    }),
   },
   swipeIndicator: {
     width: 40,

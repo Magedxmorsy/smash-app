@@ -126,8 +126,10 @@ export const AuthProvider = ({ children }) => {
     updateUserData,
     deleteAccount: handleDeleteAccount,
     isAuthenticated: !!user,
+    isAuthenticated: !!user,
     isEmailVerified: user?.emailVerified || false,
     setIsSigningUp,
+    setLocalUserData: setUserData, // Exposed for optimistic updates
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

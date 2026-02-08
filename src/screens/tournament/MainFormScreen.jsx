@@ -9,6 +9,7 @@ import CardGroup from '../../components/ui/CardGroup';
 import ListItem from '../../components/ui/ListItem';
 import Button from '../../components/ui/Button';
 import Banner from '../../components/ui/Banner';
+import RescheduleConfirmationDialog from '../../components/tournament/RescheduleConfirmationDialog';
 import { useTournamentForm } from '../../contexts/TournamentFormContext';
 import { useTournaments } from '../../contexts/TournamentContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -50,6 +51,8 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     setJoinAsPlayer,
     errors,
     setErrors,
+    matchDuration,
+    setMatchDuration,
   } = useTournamentForm();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -57,9 +60,15 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [pendingTournamentData, setPendingTournamentData] = useState(null);
+  const [changesDescription, setChangesDescription] = useState('');
+
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
 
   // Ref for Android picker to trigger native dialog
   const androidPickerRef = useRef(null);
+  const androidDurationPickerRef = useRef(null);
 
   // Check if tournament has started (not in REGISTRATION phase)
   const isTournamentStarted = editMode && tournament && tournament.status !== 'REGISTRATION';
@@ -123,12 +132,29 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     try {
       // Combine date and time into a single datetime
       let tournamentDateTime = null;
-      if (date) {
-        tournamentDateTime = new Date(date);
-        if (time) {
-          tournamentDateTime.setHours(time.getHours());
-          tournamentDateTime.setMinutes(time.getMinutes());
-        }
+      if (date && time) {
+        // IMPORTANT: Extract date/time components using UTC methods to preserve the exact date
+        // The pickers return dates in UTC that represent the LOCAL date/time the user selected
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth();
+        const day = date.getUTCDate();
+        const hours = time.getUTCHours();
+        const minutes = time.getUTCMinutes();
+
+        // Create the combined datetime in UTC, which will represent the local time
+        tournamentDateTime = new Date(Date.UTC(year, month, day, hours, minutes, 0, 0));
+
+        console.log('📅 DateTime construction:', {
+          dateValue: date,
+          timeValue: time,
+          year, month, day, hours, minutes,
+          combinedDateTime: tournamentDateTime,
+          isoString: tournamentDateTime.toISOString(),
+          localString: tournamentDateTime.toString()
+        });
+      } else if (date) {
+        // If only date is provided, use noon UTC
+        tournamentDateTime = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12, 0, 0, 0));
       }
 
       const tournamentData = {
@@ -140,6 +166,12 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         teamCount: teamCount || 8,
         rules: rules.trim() || 'Standard tournament rules apply.',
         joinAsPlayer: joinAsPlayer,
+        matchDuration: matchDuration || 30,
+      };
+
+      // Helper to remove undefined fields recursively (using JSON trick)
+      const sanitizeData = (data) => {
+        return JSON.parse(JSON.stringify(data));
       };
 
       let resultTournament;
@@ -228,16 +260,27 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
           }
         }
 
+        // Check if rescheduling confirmation is needed
+        // LOGIC REMOVED as per user request (Step 582): "believe it is not neseaasry now we should just update the date and time of the torunament simple"
+        /*
+        if (tournament.matches && tournament.matches.length > 0) {
+           // ... logic removed ...
+        }
+        */
+
         // Update existing tournament
         console.log('💾 Updating tournament with data:', {
           tournamentId: tournament.id,
+          location: tournamentData.location,
+          dateTime: tournamentData.dateTime,
           hasTeams: !!tournamentData.teams,
           teamsLength: tournamentData.teams?.length,
           joinAsPlayer: tournamentData.joinAsPlayer
         });
 
-        await updateTournament(tournament.id, tournamentData);
-        resultTournament = { ...tournament, ...tournamentData };
+        const cleanData = sanitizeData(tournamentData);
+        await updateTournament(tournament.id, cleanData);
+        resultTournament = { ...tournament, ...cleanData };
 
         console.log('✅ Tournament update complete');
 
@@ -248,7 +291,8 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         }
       } else {
         // Create new tournament
-        resultTournament = await createTournament(tournamentData);
+        const cleanData = sanitizeData(tournamentData);
+        resultTournament = await createTournament(cleanData);
       }
 
       // Show success toast
@@ -273,6 +317,44 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleRescheduleConfirm = async () => {
+    console.log('✅ User confirmed rescheduling');
+    setShowRescheduleDialog(false);
+
+    // Clean up state immediately to prevent re-triggers
+    const dataToSave = pendingTournamentData;
+    setPendingTournamentData(null);
+    setChangesDescription('');
+
+    setIsCreating(true);
+
+    try {
+      if (dataToSave && tournament?.id) {
+        await updateTournament(tournament.id, dataToSave);
+        const resultTournament = { ...tournament, ...dataToSave };
+
+        showToast('Tournament updated successfully', 'success');
+
+        // Call onSave which will close the modal
+        if (onSave) {
+          onSave(resultTournament);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating tournament after confirmation:', error);
+      showToast('Failed to save tournament. Please try again.', 'error');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleRescheduleCancel = () => {
+    console.log('❌ User cancelled rescheduling');
+    setShowRescheduleDialog(false);
+    setPendingTournamentData(null);
+    setChangesDescription('');
   };
 
   const handleDateChange = (event, selectedDate) => {
@@ -311,10 +393,15 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
     return count ? `${count} teams` : '';
   };
 
+  const formatDuration = (minutes) => {
+    return minutes ? `Match duration: ${minutes} min` : '';
+  };
+
   // Team counts designed to prevent 2-team groups:
   // - 6 teams: 2 groups of 3
   // - 8+ teams: All divisible by 4 for even 4-team groups
   const teamOptions = [6, 8, 12, 16, 20, 24, 32];
+  const durationOptions = [15, 30, 45];
 
   return (
     <View style={styles.wrapper}>
@@ -324,246 +411,307 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-      {isTournamentStarted && !bannerDismissed && (
-        <View style={styles.bannerContainer}>
-          <Banner
-            variant="info"
-            message="Tournament has started. Format and team count can't be changed."
-            dismissible={true}
-            onClose={() => setBannerDismissed(true)}
-          />
-        </View>
-      )}
+        {isTournamentStarted && !bannerDismissed && (
+          <View style={styles.bannerContainer}>
+            <Banner
+              variant="info"
+              message="Tournament has started. Format and team count can't be changed."
+              dismissible={true}
+              onClose={() => setBannerDismissed(true)}
+            />
+          </View>
+        )}
 
-      <Input
-        label="Name"
-        placeholder="e.g. Amsterdam Padel Bros"
-        value={tournamentName}
-        onChangeText={(value) => {
-          setTournamentName(value);
-          if (errors.name) setErrors({ ...errors, name: '' });
-        }}
-        error={errors.name}
-      />
-
-      <Input
-        label="Location"
-        placeholder="Enter tournament location"
-        value={location}
-        onChangeText={(value) => {
-          setLocation(value);
-          if (errors.location) setErrors({ ...errors, location: '' });
-        }}
-        error={errors.location}
-        leftIcon={<LocationIcon width={24} height={24} />}
-      />
-
-      <CardGroup title="Details">
-
-        <ListItem
-          icon={<BallIcon width={24} height={24} />}
-          placeholder="Add courts (Optional)"
-          value={courtNumbers ? `Courts: ${courtNumbers}` : ''}
-          onPress={() => {
-            console.log('🔵 Courts pressed! Navigating...');
-            onNavigate('courts');
+        <Input
+          label="Name"
+          placeholder="e.g. Amsterdam Padel Bros"
+          value={tournamentName}
+          onChangeText={(value) => {
+            setTournamentName(value);
+            if (errors.name) setErrors({ ...errors, name: '' });
           }}
-          useChevronRight={true}
-          editable={false}
+          error={errors.name}
         />
 
-        <>
-          <ListItem
-            icon={<CalendarIcon width={24} height={24} />}
-            placeholder="Choose date"
-            value={formatDate(date)}
-            onPress={() => {
-              Keyboard.dismiss();
-              setShowDatePicker(!showDatePicker);
-            }}
-            error={errors.date}
-          />
-
-          {showDatePicker && Platform.OS === 'ios' && (
-            <View style={styles.pickerContainer}>
-              <DateTimePicker
-                value={date || new Date()}
-                mode="date"
-                display="inline"
-                onChange={handleDateChange}
-                minimumDate={new Date()}
-                themeVariant="light"
-                accentColor="#281F42"
-              />
-            </View>
-          )}
-        </>
-
-        <>
-          <ListItem
-            icon={<TimeIcon width={24} height={24} />}
-            placeholder="Choose time"
-            value={formatTime(time)}
-            onPress={() => {
-              Keyboard.dismiss();
-              setShowTimePicker(!showTimePicker);
-            }}
-            error={errors.time}
-          />
-
-          {showTimePicker && Platform.OS === 'ios' && (
-            <View style={styles.pickerContainer}>
-              <DateTimePicker
-                value={time || new Date()}
-                mode="time"
-                display="spinner"
-                onChange={handleTimeChange}
-                themeVariant="light"
-                accentColor="#281F42"
-              />
-            </View>
-          )}
-        </>
-
-        <ListItem
-          icon={<CompeteIcon width={24} height={24} />}
-          placeholder="Tournament format"
-          value={format}
-          onPress={() => {
-            if (isTournamentStarted) return;
-            console.log('🔵 Format pressed! Navigating...');
-            onNavigate('format');
+        <Input
+          label="Location"
+          placeholder="Enter tournament location"
+          value={location}
+          onChangeText={(value) => {
+            setLocation(value);
+            if (errors.location) setErrors({ ...errors, location: '' });
           }}
-          useChevronRight={true}
-          editable={false}
-          disabled={isTournamentStarted}
+          error={errors.location}
+          leftIcon={<LocationIcon width={24} height={24} color={Colors.primary300} />}
         />
 
-        <>
+        <CardGroup title="Details">
+
           <ListItem
-            icon={<TeamIcon width={24} height={24} />}
-            placeholder="Add number of teams"
-            value={formatTeamCount(teamCount)}
+            icon={<BallIcon width={24} height={24} color={Colors.primary300} />}
+            placeholder="Add courts (Optional)"
+            value={courtNumbers ? `Courts: ${courtNumbers}` : ''}
+            onPress={() => {
+              console.log('🔵 Courts pressed! Navigating...');
+              onNavigate('courts');
+            }}
+            useChevronRight={true}
+            editable={false}
+          />
+
+          <>
+            <ListItem
+              icon={<CalendarIcon width={24} height={24} color={Colors.primary300} />}
+              placeholder="Choose date"
+              value={formatDate(date)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowDatePicker(!showDatePicker);
+              }}
+              error={errors.date}
+            />
+
+            {showDatePicker && Platform.OS === 'ios' && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={date || new Date()}
+                  mode="date"
+                  display="inline"
+                  onChange={handleDateChange}
+                  minimumDate={new Date()}
+                  themeVariant="light"
+                  accentColor="#281F42"
+                />
+              </View>
+            )}
+          </>
+
+          <>
+            <ListItem
+              icon={<TimeIcon width={24} height={24} color={Colors.primary300} />}
+              placeholder="Choose time"
+              value={formatTime(time)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowTimePicker(!showTimePicker);
+              }}
+              error={errors.time}
+            />
+
+            {showTimePicker && Platform.OS === 'ios' && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={time || new Date()}
+                  mode="time"
+                  display="spinner"
+                  onChange={handleTimeChange}
+                  themeVariant="light"
+                  accentColor="#281F42"
+                />
+              </View>
+            )}
+          </>
+
+          <ListItem
+            icon={<CompeteIcon width={24} height={24} color={Colors.primary300} />}
+            placeholder="Tournament format"
+            value={format ? `Format: ${format}` : ''}
             onPress={() => {
               if (isTournamentStarted) return;
-              Keyboard.dismiss();
-              if (Platform.OS === 'android') {
-                // On Android, focus the hidden Picker to trigger native dialog
-                androidPickerRef.current?.focus();
-              } else {
-                // On iOS, toggle inline picker visibility
-                setShowTeamPicker(!showTeamPicker);
-              }
+              console.log('🔵 Format pressed! Navigating...');
+              onNavigate('format');
             }}
+            useChevronRight={true}
+            editable={false}
             disabled={isTournamentStarted}
-            error={errors.teamCount}
           />
 
-          {/* iOS: Inline picker */}
-          {showTeamPicker && Platform.OS === 'ios' && (
-            <View style={styles.pickerContainer}>
+          <>
+            <ListItem
+              icon={<TeamIcon width={24} height={24} color={Colors.primary300} />}
+              placeholder="Add number of teams"
+              value={formatTeamCount(teamCount)}
+              onPress={() => {
+                if (isTournamentStarted) return;
+                Keyboard.dismiss();
+                if (Platform.OS === 'android') {
+                  // On Android, focus the hidden Picker to trigger native dialog
+                  androidPickerRef.current?.focus();
+                } else {
+                  // On iOS, toggle inline picker visibility
+                  setShowTeamPicker(!showTeamPicker);
+                }
+              }}
+              disabled={isTournamentStarted}
+              error={errors.teamCount}
+            />
+
+            {/* iOS: Inline picker */}
+            {showTeamPicker && Platform.OS === 'ios' && (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={teamCount || 8}
+                  onValueChange={(itemValue) => {
+                    setTeamCount(itemValue);
+                    if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+                  }}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  {teamOptions.map((count) => (
+                    <Picker.Item
+                      key={count}
+                      label={`${count} teams`}
+                      value={count}
+                      color={Colors.primary300}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            )}
+
+            {/* Android: Hidden picker that triggers native dialog */}
+            {Platform.OS === 'android' && (
               <Picker
+                ref={androidPickerRef}
                 selectedValue={teamCount || 8}
                 onValueChange={(itemValue) => {
                   setTeamCount(itemValue);
                   if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
                 }}
-                style={styles.picker}
-                itemStyle={styles.pickerItem}
+                style={styles.hiddenPicker}
               >
                 {teamOptions.map((count) => (
                   <Picker.Item
                     key={count}
                     label={`${count} teams`}
                     value={count}
-                    color={Colors.primary300}
                   />
                 ))}
               </Picker>
-            </View>
-          )}
+            )}
+          </>
 
-          {/* Android: Hidden picker that triggers native dialog */}
-          {Platform.OS === 'android' && (
-            <Picker
-              ref={androidPickerRef}
-              selectedValue={teamCount || 8}
-              onValueChange={(itemValue) => {
-                setTeamCount(itemValue);
-                if (errors.teamCount) setErrors({ ...errors, teamCount: '' });
+          <>
+            <ListItem
+              icon={<TimeIcon width={24} height={24} color={Colors.primary300} />}
+              placeholder="Match duration"
+              value={formatDuration(matchDuration)}
+              onPress={() => {
+                if (isTournamentStarted) return;
+                Keyboard.dismiss();
+                if (Platform.OS === 'android') {
+                  androidDurationPickerRef.current?.focus();
+                } else {
+                  setShowDurationPicker(!showDurationPicker);
+                }
               }}
-              style={styles.hiddenPicker}
-            >
-              {teamOptions.map((count) => (
-                <Picker.Item
-                  key={count}
-                  label={`${count} teams`}
-                  value={count}
-                />
-              ))}
-            </Picker>
-          )}
-        </>
-      </CardGroup>
-
-      <CardGroup title="Rules">
-        <ListItem
-          icon={<RulesIcon width={24} height={24} />}
-          placeholder="Add custom rules (Optional)"
-          value={rules}
-          onPress={() => {
-            console.log('🔵 Rules pressed! Navigating...');
-            onNavigate('rules');
-          }}
-          useChevronRight={true}
-          editable={false}
-        />
-      </CardGroup>
-
-      <CardGroup title="Host options">
-        <View>
-          <View style={[styles.switchRow, Platform.OS === 'android' && styles.switchRowAndroid]}>
-            <View style={styles.switchContent}>
-              <TeamIcon width={24} height={24} color={Colors.primary300} />
-              <Text style={styles.switchLabel}>Join as player</Text>
-            </View>
-            <Switch
-              value={joinAsPlayer}
-              onValueChange={setJoinAsPlayer}
+              disabled={isTournamentStarted}
             />
+
+            {/* iOS: Inline picker for Duration */}
+            {showDurationPicker && Platform.OS === 'ios' && (
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={matchDuration || 30}
+                  onValueChange={(itemValue) => {
+                    setMatchDuration(itemValue);
+                  }}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  {durationOptions.map((duration) => (
+                    <Picker.Item
+                      key={duration}
+                      label={`${duration} min`}
+                      value={duration}
+                      color={Colors.primary300}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            )}
+
+            {/* Android: Hidden picker for Duration */}
+            {Platform.OS === 'android' && (
+              <Picker
+                ref={androidDurationPickerRef}
+                selectedValue={matchDuration || 30}
+                onValueChange={(itemValue) => {
+                  setMatchDuration(itemValue);
+                }}
+                style={styles.hiddenPicker}
+              >
+                {durationOptions.map((duration) => (
+                  <Picker.Item
+                    key={duration}
+                    label={`${duration} min`}
+                    value={duration}
+                  />
+                ))}
+              </Picker>
+            )}
+          </>
+        </CardGroup>
+
+        <CardGroup title="Rules">
+          <ListItem
+            icon={<RulesIcon width={24} height={24} color={Colors.primary300} />}
+            placeholder="Add custom rules (Optional)"
+            value={rules}
+            onPress={() => {
+              console.log('🔵 Rules pressed! Navigating...');
+              onNavigate('rules');
+            }}
+            useChevronRight={true}
+            editable={false}
+          />
+        </CardGroup>
+
+        <CardGroup title="Host options">
+          <View>
+            <View style={[styles.switchRow, Platform.OS === 'android' && styles.switchRowAndroid]}>
+              <View style={styles.switchContent}>
+                <TeamIcon width={24} height={24} color={Colors.primary300} />
+                <Text style={styles.switchLabel}>Join as player</Text>
+              </View>
+              <Switch
+                value={joinAsPlayer}
+                onValueChange={setJoinAsPlayer}
+              />
+            </View>
+            <Text style={styles.switchDescription}>
+              Add yourself as a participant
+            </Text>
           </View>
-          <Text style={styles.switchDescription}>
-            Add yourself as a participant
-          </Text>
-        </View>
-      </CardGroup>
+        </CardGroup>
 
 
-      {/* Date Picker Modal (Android only) */}
-      {showDatePicker && Platform.OS === 'android' && (
-        <DateTimePicker
-          value={date || new Date()}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-          minimumDate={new Date()}
-        />
-      )}
+        {/* Date Picker Modal (Android only) */}
+        {showDatePicker && Platform.OS === 'android' && (
+          <DateTimePicker
+            value={date || new Date()}
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+            minimumDate={new Date()}
+          />
+        )}
 
-      {/* Time Picker Modal (Android only) */}
-      {showTimePicker && Platform.OS === 'android' && (
-        <DateTimePicker
-          value={time || new Date()}
-          mode="time"
-          display="default"
-          onChange={handleTimeChange}
-        />
-      )}
+        {/* Time Picker Modal (Android only) */}
+        {showTimePicker && Platform.OS === 'android' && (
+          <DateTimePicker
+            value={time || new Date()}
+            mode="time"
+            display="default"
+            onChange={handleTimeChange}
+          />
+        )}
 
       </ScrollView>
 
       {/* Floating CTA Button */}
-      <View style={[styles.floatingButtonContainer, { paddingBottom: insets.bottom }]}>
+      <View style={[styles.floatingButtonContainer, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 24 : 0) }]}>
         <Button
           title={editMode ? 'Save' : 'Create'}
           onPress={handleCreate}
@@ -572,6 +720,14 @@ export default function MainFormScreen({ onNavigate, editMode, onSave, onClose, 
           fullWidth
         />
       </View>
+
+      {/* Reschedule Confirmation Dialog */}
+      <RescheduleConfirmationDialog
+        visible={showRescheduleDialog}
+        onConfirm={handleRescheduleConfirm}
+        onCancel={handleRescheduleCancel}
+        changesDescription={changesDescription}
+      />
     </View>
   );
 }

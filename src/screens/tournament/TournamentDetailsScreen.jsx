@@ -4,11 +4,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
-import { scheduleMatches, parseCourts } from '../../utils/courtScheduler';
+import { scheduleMatches, parseCourts, calculateRoundDuration } from '../../utils/courtScheduler';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTournaments } from '../../contexts/TournamentContext';
 import { useToast } from '../../contexts/ToastContext';
-import { createNotification, createNotificationsForUsers } from '../../services/notificationService';
+import { getDocument } from '../../services/firestoreService';
 import Button from '../../components/ui/Button';
 import TabSelector from '../../components/ui/TabSelector';
 import FilterChips from '../../components/ui/FilterChips';
@@ -19,6 +19,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import TeamsList from '../../components/tournament/TeamsList';
 import WinnersBanner from '../../components/tournament/WinnersBanner';
 import Player from '../../components/ui/Player';
+import Team from '../../components/ui/Team';
 import MatchCard from '../../components/match/MatchCard';
 import RecordScoreModal from '../../components/match/RecordScoreModal';
 import CreateTeamBottomSheet from '../../components/tournament/CreateTeamBottomSheet';
@@ -45,7 +46,7 @@ import CloseIcon from '../../../assets/icons/close.svg';
 export default function TournamentDetailsScreen({ navigation, route, onEmailVerificationRequired }) {
   const { tournament: propTournament, tournamentId, onAuthRequired, openStartSheet } = route?.params || {};
   const { isAuthenticated, userData, isEmailVerified } = useAuth();
-  const { deleteTournament, getTournamentById, updateTournament, removePlayerFromTeam } = useTournaments();
+  const { deleteTournament, getTournamentById, updateTournament, removePlayerFromTeam, checkAndProgressTournament } = useTournaments();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [rulesExpanded, setRulesExpanded] = useState(false);
@@ -58,12 +59,39 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
   const [generatedGroups, setGeneratedGroups] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [userHasTeam, setUserHasTeam] = useState(false);
-  const [expandedRounds, setExpandedRounds] = useState({ 1: true }); // Round 1 expanded by default
+  const [expandedRounds, setExpandedRounds] = useState(() => {
+    const initial = { 1: true };
+    console.log('🎯 Initial expandedRounds state:', initial);
+    return initial;
+  }); // Round 1 expanded by default
   const [selectedGroupPerRound, setSelectedGroupPerRound] = useState({}); // Track selected group per round
   const [showRecordScoreModal, setShowRecordScoreModal] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showFormatInfoSheet, setShowFormatInfoSheet] = useState(false);
+  const [selectedTableGroup, setSelectedTableGroup] = useState(null); // For Table tab group filter
+  const [fetchedTournament, setFetchedTournament] = useState(null);
+  const [isFetching, setIsFetching] = useState(false);
   const animatedHeight = useRef(new Animated.Value(0)).current;
+
+  // New: Fetch tournament if we only have an ID (Deep Linking)
+  useEffect(() => {
+    async function fetchTournament() {
+      if (tournamentId && !getTournamentById(tournamentId)) {
+        console.log('🔗 Deep link detected. Fetching tournament:', tournamentId);
+        setIsFetching(true);
+        const { data, error } = await getDocument('tournaments', tournamentId);
+        if (data) {
+          console.log('✅ Tournament fetched successfully');
+          setFetchedTournament(data);
+        } else {
+          console.error('❌ Failed to fetch deep link tournament:', error);
+          showToast('Could not find tournament details.', 'error');
+        }
+        setIsFetching(false);
+      }
+    }
+    fetchTournament();
+  }, [tournamentId]);
 
   // Animated values for each round
   const roundAnimations = useRef({
@@ -105,6 +133,20 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
     }
   }, [openStartSheet]);
 
+  // Initialize selectedTableGroup with first available group
+  useEffect(() => {
+    if (tournament?.groups?.length > 0) {
+      // Check if current selection is valid
+      const isValid = selectedTableGroup && tournament.groups.some(g => g.name === selectedTableGroup);
+
+      // If invalid, select first group
+      if (!isValid) {
+        console.log('🔄 Auto-selecting first group:', tournament.groups[0].name);
+        setSelectedTableGroup(tournament.groups[0].name);
+      }
+    }
+  }, [tournament, selectedTableGroup, activeTab]);
+
   const handleShare = async () => {
     try {
       // Use HTTPS domain for universal sharing
@@ -113,13 +155,13 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       // Format date and time properly
       const formattedDateTime = tournament.dateTime
         ? (() => {
-            const dateObj = new Date(tournament.dateTime);
-            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-            const formattedDate = dateObj.toLocaleDateString('en-US', dateOptions);
-            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-            const formattedTime = dateObj.toLocaleTimeString('en-US', timeOptions);
-            return `${formattedDate} | ${formattedTime}`;
-          })()
+          const dateObj = new Date(tournament.dateTime);
+          const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+          const formattedDate = dateObj.toLocaleDateString('en-US', dateOptions);
+          const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+          const formattedTime = dateObj.toLocaleTimeString('en-US', timeOptions);
+          return `${formattedDate} | ${formattedTime}`;
+        })()
         : 'Date TBD';
 
       // Create share message with tournament details
@@ -143,6 +185,196 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       console.error('Error sharing:', error);
       Alert.alert('Share Failed', 'Could not share tournament. Please try again.');
     }
+  };
+
+  // Calculate standings for a specific group
+  const calculateStandings = (groupId) => {
+    if (!tournament || !tournament.matches || !tournament.teams || !tournament.groups) {
+      return [];
+    }
+
+    // Get the group
+    const group = tournament.groups.find(g => g.id === groupId);
+    if (!group) return [];
+
+    // Get teams in this group
+    const groupTeams = group.teams || [];
+
+    console.log('📊 Calculating standings for group:', groupId);
+    console.log('📊 Group teams:', groupTeams.length);
+    console.log('📊 Total matches:', tournament.matches.length);
+
+    // Initialize standings for each team
+    const standings = groupTeams.map((team, index) => ({
+      team,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      points: 0,
+      gamesWon: 0,
+      gamesLost: 0,
+      gameDiff: 0,
+      headToHead: {}, // Store head-to-head results against other teams
+    }));
+
+    // Get all scored matches for this group (scoreRecorded means match has been scored)
+    const groupMatches = tournament.matches.filter(
+      match => match.groupId === groupId && match.scoreRecorded && match.score
+    );
+
+    console.log('📊 Scored matches for this group:', groupMatches.length);
+
+    // Helper function to match teams
+    const teamsMatch = (team1, team2) => {
+      // Try matching by userId first (most reliable)
+      if (team1.player1.userId && team2.player1.userId &&
+        team1.player2.userId && team2.player2.userId) {
+        return (
+          team1.player1.userId === team2.player1.userId &&
+          team1.player2.userId === team2.player2.userId
+        );
+      }
+
+      // Fallback: match by name
+      return (
+        team1.player1.firstName === team2.player1.firstName &&
+        team1.player1.lastName === team2.player1.lastName &&
+        team1.player2.firstName === team2.player2.firstName &&
+        team1.player2.lastName === team2.player2.lastName
+      );
+    };
+
+    // Helper to get team key for head-to-head tracking
+    const getTeamKey = (team) => {
+      if (team.player1.userId && team.player2.userId) {
+        return `${team.player1.userId}-${team.player2.userId}`;
+      }
+      return `${team.player1.firstName}${team.player1.lastName}-${team.player2.firstName}${team.player2.lastName}`;
+    };
+
+    // Calculate stats from scored matches
+    groupMatches.forEach(match => {
+      const team1Index = standings.findIndex(s => teamsMatch(s.team, match.team1));
+      const team2Index = standings.findIndex(s => teamsMatch(s.team, match.team2));
+
+      if (team1Index !== -1 && team2Index !== -1) {
+        standings[team1Index].played++;
+        standings[team2Index].played++;
+
+        // Calculate games from score (score is array of sets like [{teamA: "6", teamB: "3"}])
+        let team1Games = 0;
+        let team2Games = 0;
+        if (match.score && Array.isArray(match.score)) {
+          match.score.forEach(set => {
+            team1Games += parseInt(set.teamA) || 0;
+            team2Games += parseInt(set.teamB) || 0;
+          });
+        }
+
+        standings[team1Index].gamesWon += team1Games;
+        standings[team1Index].gamesLost += team2Games;
+        standings[team2Index].gamesWon += team2Games;
+        standings[team2Index].gamesLost += team1Games;
+
+        // Determine winner from winningTeam field ('left' = team1, 'right' = team2)
+        const team1Won = match.winningTeam === 'left';
+        const team2Won = match.winningTeam === 'right';
+
+        // Track head-to-head results
+        const team1Key = getTeamKey(match.team1);
+        const team2Key = getTeamKey(match.team2);
+
+        if (team1Won) {
+          // Team 1 wins
+          standings[team1Index].won++;
+          standings[team1Index].points += 3;
+          standings[team2Index].lost++;
+          // Head-to-head: team1 beat team2
+          standings[team1Index].headToHead[team2Key] = (standings[team1Index].headToHead[team2Key] || 0) + 1;
+          standings[team2Index].headToHead[team1Key] = (standings[team2Index].headToHead[team1Key] || 0) - 1;
+        } else if (team2Won) {
+          // Team 2 wins
+          standings[team2Index].won++;
+          standings[team2Index].points += 3;
+          standings[team1Index].lost++;
+          // Head-to-head: team2 beat team1
+          standings[team2Index].headToHead[team1Key] = (standings[team2Index].headToHead[team1Key] || 0) + 1;
+          standings[team1Index].headToHead[team2Key] = (standings[team1Index].headToHead[team2Key] || 0) - 1;
+        } else {
+          // Draw (shouldn't happen in tennis/padel, but handle it)
+          standings[team1Index].drawn++;
+          standings[team2Index].drawn++;
+          standings[team1Index].points += 1;
+          standings[team2Index].points += 1;
+        }
+      }
+    });
+
+    // Calculate game difference for each team
+    standings.forEach(s => {
+      s.gameDiff = s.gamesWon - s.gamesLost;
+    });
+
+    // Sort by: 1) Points, 2) Head-to-head, 3) Game difference, 4) Games won
+    return standings.sort((a, b) => {
+      // 1. Points (descending)
+      if (b.points !== a.points) return b.points - a.points;
+
+      // 2. Head-to-head result (if teams played each other)
+      const bKey = getTeamKey(b.team);
+      const aVsB = a.headToHead[bKey] || 0;
+      if (aVsB !== 0) return -aVsB; // Positive means A beat B, so A should rank higher
+
+      // 3. Game difference (descending)
+      if (b.gameDiff !== a.gameDiff) return b.gameDiff - a.gameDiff;
+
+      // 4. Games won (descending)
+      if (b.gamesWon !== a.gamesWon) return b.gamesWon - a.gamesWon;
+
+      // 5. Fallback: matches won
+      return b.won - a.won;
+    });
+  };
+
+  // Create placeholder team for knockout stage
+  // Takes a description like "Group A 1st" or "Winner SF1"
+  // Splits it into two lines for display
+  const createPlaceholderTeam = (description) => {
+    // Parse the description to extract placement and group/round info
+    let firstLine = '';
+    let secondLine = '';
+
+    if (description.includes('Winner')) {
+      // For finals: "Winner SF1" → "Semifinal 1" + "winner"
+      firstLine = description.replace('Winner ', '').replace('SF', 'Semifinal ');
+      secondLine = 'winner';
+    } else {
+      // For semifinals: "Group A 1st" → "1st place" + "Group A"
+      const parts = description.split(' ');
+      if (parts.length >= 2) {
+        const groupName = parts[0] + ' ' + parts[1]; // "Group A" or "Group B"
+        const placement = parts[2]; // "1st" or "2nd"
+        firstLine = placement === '1st' ? '1st place' : '2nd place';
+        secondLine = groupName;
+      } else {
+        firstLine = description;
+        secondLine = '';
+      }
+    }
+
+    return {
+      player1: {
+        firstName: firstLine,
+        lastName: secondLine,
+        uid: 'placeholder',
+      },
+      player2: {
+        firstName: '',
+        lastName: '',
+        uid: 'placeholder',
+      },
+    };
   };
 
   const handleJoinTournament = () => {
@@ -177,7 +409,7 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
     freshTournament = getTournamentById(propTournament.id);
   }
 
-  const tournament = freshTournament || propTournament || {
+  const tournament = freshTournament || fetchedTournament || propTournament || {
     name: 'April friends challenge',
     status: 'REGISTRATION',
     location: 'PadelPoints Badhoevedorp',
@@ -548,7 +780,7 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       // Find the actual index in tournament.teams by matching player data
       const actualTeamIndex = tournament.teams.findIndex(t =>
         (t.player1?.userId === teamToRemove.player1?.userId &&
-         t.player2?.userId === teamToRemove.player2?.userId) ||
+          t.player2?.userId === teamToRemove.player2?.userId) ||
         (t.player1?.userId === teamToRemove.player1?.userId && !t.player2 && !teamToRemove.player2) ||
         (t.player2?.userId === teamToRemove.player2?.userId && !t.player1 && !teamToRemove.player1)
       );
@@ -730,15 +962,13 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
     // Now schedule all matches round by round
     // This ensures matches from different groups in the same round get different courts
     const baseDateTime = new Date(tournament.dateTime);
+    let cumulativeOffset = 0; // Track total time used by previous rounds
 
     Object.keys(matchesByRound).sort((a, b) => a - b).forEach((roundNumber) => {
       const roundMatches = matchesByRound[roundNumber];
-      const roundIndex = parseInt(roundNumber) - 1;
 
-      // Calculate start time for this round
-      // Each round is offset by match duration + buffer time
-      const roundOffset = roundIndex * (30 + 15); // 30 min match + 15 min buffer
-      const roundStartTime = new Date(baseDateTime.getTime() + roundOffset * 60000);
+      // Calculate start time based on cumulative offset
+      const roundStartTime = new Date(baseDateTime.getTime() + cumulativeOffset * 60000);
 
       // Schedule ALL matches for this round together
       // This allows proper court distribution across groups
@@ -750,8 +980,69 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         15  // Buffer time: 15 minutes
       );
 
+      // Calculate actual duration of this round and add to cumulative offset
+      // This prevents court conflicts when there are fewer courts than matches
+      cumulativeOffset += calculateRoundDuration(
+        roundMatches.length,
+        courtNames.length,
+        30,
+        15
+      );
+
       allMatches.push(...scheduledRoundMatches);
     });
+
+    // Add placeholder matches for knockout stage and finals
+    // These will be displayed as TBD until group stage completes
+    if (groups.length === 2) {
+      const groupA = groups[0];
+      const groupB = groups[1];
+
+      // Semifinal 1: Group A 1st vs Group B 2nd
+      allMatches.push({
+        id: `knockout-sf1-placeholder`,
+        round: 'semifinal',
+        team1: createPlaceholderTeam(`${groupA.name} 1st`),
+        team2: createPlaceholderTeam(`${groupB.name} 2nd`),
+        tournamentName: tournament.name,
+        location: tournament.location,
+        court: 'TBD',
+        status: 'Semifinal 1',
+        scoreRecorded: false,
+        score: null,
+        winningTeam: null,
+      });
+
+      // Semifinal 2: Group B 1st vs Group A 2nd
+      allMatches.push({
+        id: `knockout-sf2-placeholder`,
+        round: 'semifinal',
+        team1: createPlaceholderTeam(`${groupB.name} 1st`),
+        team2: createPlaceholderTeam(`${groupA.name} 2nd`),
+        tournamentName: tournament.name,
+        location: tournament.location,
+        court: 'TBD',
+        status: 'Semifinal 2',
+        scoreRecorded: false,
+        score: null,
+        winningTeam: null,
+      });
+
+      // Final: Winner SF1 vs Winner SF2
+      allMatches.push({
+        id: `knockout-final-placeholder`,
+        round: 'final',
+        team1: createPlaceholderTeam('Winner SF1'),
+        team2: createPlaceholderTeam('Winner SF2'),
+        tournamentName: tournament.name,
+        location: tournament.location,
+        court: 'TBD',
+        status: 'Final',
+        scoreRecorded: false,
+        score: null,
+        winningTeam: null,
+      });
+    }
 
     return allMatches;
   };
@@ -849,11 +1140,31 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
 
   // Toggle round expansion
   const toggleRound = (roundNumber) => {
-    setExpandedRounds(prev => ({
-      ...prev,
-      [roundNumber]: !prev[roundNumber],
-    }));
+    console.log('🔄 toggleRound called for round:', roundNumber);
+    setExpandedRounds(prev => {
+      const newState = {
+        ...prev,
+        [roundNumber]: !prev[roundNumber],
+      };
+      console.log('📊 New expandedRounds state:', newState);
+      return newState;
+    });
   };
+
+  // Animate rounds when expandedRounds changes
+  useEffect(() => {
+    console.log('🎬 Animation effect triggered, expandedRounds:', expandedRounds);
+    Object.keys(expandedRounds).forEach(roundNumber => {
+      const round = parseInt(roundNumber);
+      const isExpanded = expandedRounds[round];
+      console.log(`🎬 Animating round ${round} to ${isExpanded ? 'expanded' : 'collapsed'}`);
+      Animated.timing(roundAnimations[round], {
+        toValue: isExpanded ? 1 : 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [expandedRounds]);
 
   // Get selected group for a round (default to user's group or first group)
   const getSelectedGroup = (roundNumber) => {
@@ -1043,6 +1354,10 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         matches: updatedMatches,
       });
 
+      // Check if tournament should progress to next stage
+      // Pass the updatedMatches array to avoid race condition with Firestore updates
+      await checkAndProgressTournament(tournament.id, updatedMatches);
+
       // Determine if this is adding or updating a score
       const isUpdating = selectedMatch.scoreRecorded === true;
       const action = isUpdating ? 'score_updated' : 'score_added';
@@ -1098,6 +1413,14 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
   };
 
   console.log('TournamentDetailsScreen - currentUser:', currentUser);
+
+  if (isFetching) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.accent300} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
@@ -1166,7 +1489,7 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         {/* Tab Selector - Only show for non-registration stages */}
         {tournament.status !== 'REGISTRATION' && (
           <TabSelector
-            tabs={['Details', 'Matches']}
+            tabs={['Details', 'Matches', 'Table']}
             activeTab={activeTab}
             onTabChange={setActiveTab}
             variant="underline"
@@ -1175,45 +1498,50 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
 
         {/* Content based on active tab and status */}
         {activeTab === 'Details' && (
-          <>
+          <View>
             {/* Tournament Info Card */}
             <Card style={styles.infoCard}>
               <View style={styles.infoContainer}>
                 <DetailsListItem
-                  icon={<LocationIcon width={24} height={24} />}
+                  icon={<LocationIcon width={24} height={24} color={Colors.primary300} />}
                   text={tournament.location}
                 />
 
                 <DetailsListItem
-                  icon={<BallIcon width={24} height={24} />}
+                  icon={<BallIcon width={24} height={24} color={Colors.primary300} />}
                   text={
                     tournament.courts
                       ? (() => {
-                          const courts = parseCourts(tournament.courts);
-                          const courtNumbers = courts.map(court => court.replace(/Court\s*/i, ''));
-                          const formattedCourts = courtNumbers.length > 1
-                            ? courtNumbers.slice(0, -1).join(', ') + ' & ' + courtNumbers[courtNumbers.length - 1]
-                            : courtNumbers[0];
-                          return `Courts: ${formattedCourts}`;
-                        })()
+                        const courts = parseCourts(tournament.courts);
+                        const courtNumbers = courts.map(court => court.replace(/Court\s*/i, ''));
+                        const formattedCourts = courtNumbers.length > 1
+                          ? courtNumbers.slice(0, -1).join(', ') + ' & ' + courtNumbers[courtNumbers.length - 1]
+                          : courtNumbers[0];
+                        return `Courts: ${formattedCourts}`;
+                      })()
                       : 'Courts not specified'
                   }
                 />
 
                 <DetailsListItem
-                  icon={<CalendarIcon width={24} height={24} />}
+                  icon={<CalendarIcon width={24} height={24} color={Colors.primary300} />}
                   text={tournamentDateTime}
                 />
 
                 <DetailsListItem
-                  icon={<CompeteIcon width={24} height={24} />}
-                  text={tournament.format}
-                  actionIcon={<InfoIcon width={20} height={20} />}
+                  icon={<TimeIcon width={24} height={24} color={Colors.primary300} />}
+                  text={`Match duration: ${tournament.matchDuration || 30} min`}
+                />
+
+                <DetailsListItem
+                  icon={<CompeteIcon width={24} height={24} color={Colors.primary300} />}
+                  text={`Format: ${tournament.format}`}
+                  actionIcon={<InfoIcon width={20} height={20} color={Colors.primary300} />}
                   onActionPress={() => setShowFormatInfoSheet(true)}
                 />
 
                 <DetailsListItem
-                  icon={<TeamIcon width={24} height={24} />}
+                  icon={<TeamIcon width={24} height={24} color={Colors.primary300} />}
                   text={`${tournament.teamCount} Teams`}
                 />
               </View>
@@ -1304,43 +1632,44 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
                 tournamentStatus={tournament.status}
               />
             )}
-          </>
+          </View>
         )}
 
         {/* Matches Tab Content */}
-        {activeTab === 'Matches' && tournament.status === 'GROUP STAGE' && tournament.matches && (
-          <View style={styles.matchesContainer}>
-            {console.log('Tournament matches count:', tournament.matches.length)}
-            {console.log('First match:', tournament.matches[0])}
-            {/* Round 1 */}
-            <View style={styles.roundSection}>
-              <TouchableOpacity
-                style={styles.roundHeader}
-                onPress={() => toggleRound(1)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.roundTitle}>Round 1</Text>
-                <View style={[
-                  styles.roundChevron,
-                  !expandedRounds[1] && styles.roundChevronCollapsed
-                ]}>
-                  <ChevronDownIcon width={24} height={24} />
-                </View>
-              </TouchableOpacity>
+        {activeTab === 'Matches' && tournament.matches && (
+          <View>
+            <View style={styles.matchesContainer}>
+              {console.log('Tournament matches count:', tournament.matches.length)}
+              {console.log('First match:', tournament.matches[0])}
+              {/* Round 1 */}
+              <View style={styles.roundSection}>
+                <TouchableOpacity
+                  style={styles.roundHeader}
+                  onPress={() => toggleRound(1)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.roundTitle}>Round 1</Text>
+                  <View style={[
+                    styles.roundChevron,
+                    !expandedRounds[1] && styles.roundChevronCollapsed
+                  ]}>
+                    <ChevronDownIcon width={24} height={24} />
+                  </View>
+                </TouchableOpacity>
 
-              <Animated.View
-                style={[
-                  styles.roundContent,
-                  {
-                    maxHeight: roundAnimations[1].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 2000],
-                    }),
-                    opacity: roundAnimations[1],
-                    overflow: 'hidden',
-                  },
-                ]}
-              >
+                <Animated.View
+                  style={[
+                    styles.roundContent,
+                    {
+                      maxHeight: roundAnimations[1].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 2000],
+                      }),
+                      opacity: roundAnimations[1],
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   {/* Group Filter Chips */}
                   {tournament.groups && tournament.groups.length > 1 && (
                     <FilterChips
@@ -1370,82 +1699,82 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
                       .map(match => {
                         console.log('Rendering match:', match.id);
                         return (
-                        <MatchCard
-                          key={match.id}
-                          leftTeam={{
-                            player1: match.team1.player1,
-                            player2: match.team1.player2,
-                          }}
-                          rightTeam={{
-                            player1: match.team2.player1,
-                            player2: match.team2.player2,
-                          }}
-                          location={match.location}
-                          court={match.court}
-                          dateTime={match.dateTime}
-                          status={match.status}
-                          score={match.score}
-                          scoreRecorded={match.scoreRecorded || false}
-                          isPast={isMatchPast(match)}
-                          onAddScore={() => handleAddScore(match)}
-                          canRecord={canRecordScore(match)}
-                          highlightBorder={isUserMatch(match)}
-                          onPress={() => {
-                            // Transform match data to match MatchDetailsScreen expectations
-                            const transformedMatch = {
-                              ...match,
-                              leftTeam: {
-                                player1: match.team1.player1,
-                                player2: match.team1.player2,
-                              },
-                              rightTeam: {
-                                player1: match.team2.player1,
-                                player2: match.team2.player2,
-                              },
-                              isPast: isMatchPast(match),
-                              tournamentId: tournament?.id,
-                            };
-                            navigation.navigate('MatchDetails', { match: transformedMatch });
-                          }}
-                        />
-                      );
+                          <MatchCard
+                            key={match.id}
+                            leftTeam={{
+                              player1: match.team1.player1,
+                              player2: match.team1.player2,
+                            }}
+                            rightTeam={{
+                              player1: match.team2.player1,
+                              player2: match.team2.player2,
+                            }}
+                            location={match.location}
+                            court={match.court}
+                            dateTime={match.dateTime}
+                            status={match.status}
+                            score={match.score}
+                            scoreRecorded={match.scoreRecorded || false}
+                            isPast={isMatchPast(match)}
+                            onAddScore={() => handleAddScore(match)}
+                            canRecord={canRecordScore(match)}
+                            highlightBorder={isUserMatch(match)}
+                            onPress={() => {
+                              // Transform match data to match MatchDetailsScreen expectations
+                              const transformedMatch = {
+                                ...match,
+                                leftTeam: {
+                                  player1: match.team1.player1,
+                                  player2: match.team1.player2,
+                                },
+                                rightTeam: {
+                                  player1: match.team2.player1,
+                                  player2: match.team2.player2,
+                                },
+                                isPast: isMatchPast(match),
+                                tournamentId: tournament?.id,
+                              };
+                              navigation.navigate('MatchDetails', { match: transformedMatch });
+                            }}
+                          />
+                        );
                       })}
                   </View>
-              </Animated.View>
-            </View>
+                </Animated.View>
+              </View>
 
-            {/* Divider */}
-            <View style={styles.roundDivider} />
+              {/* Divider */}
+              <View style={styles.roundDivider} />
 
-            {/* Round 2 */}
-            <View style={styles.roundSection}>
-              <TouchableOpacity
-                style={styles.roundHeader}
-                onPress={() => toggleRound(2)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.roundTitle}>Round 2</Text>
-                <View style={[
-                  styles.roundChevron,
-                  !expandedRounds[2] && styles.roundChevronCollapsed
-                ]}>
-                  <ChevronDownIcon width={24} height={24} />
-                </View>
-              </TouchableOpacity>
+              {/* Round 2 */}
+              <View style={styles.roundSection}>
+                <TouchableOpacity
+                  style={styles.roundHeader}
+                  onPress={() => toggleRound(2)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.roundTitle}>Round 2</Text>
+                  <View style={[
+                    styles.roundChevron,
+                    !expandedRounds[2] && styles.roundChevronCollapsed
+                  ]}>
+                    <ChevronDownIcon width={24} height={24} />
+                  </View>
+                </TouchableOpacity>
 
-              <Animated.View
-                style={[
-                  styles.roundContent,
-                  {
-                    maxHeight: roundAnimations[2].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 2000],
-                    }),
-                    opacity: roundAnimations[2],
-                    overflow: 'hidden',
-                  },
-                ]}
-              >
+                <Animated.View
+                  style={[
+                    styles.roundContent,
+                    {
+                      maxHeight: roundAnimations[2].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 2000],
+                      }),
+                      opacity: roundAnimations[2],
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   {/* Group Filter Chips */}
                   {tournament.groups && tournament.groups.length > 1 && (
                     <FilterChips
@@ -1504,41 +1833,41 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
                         />
                       ))}
                   </View>
-              </Animated.View>
-            </View>
+                </Animated.View>
+              </View>
 
-            {/* Divider */}
-            <View style={styles.roundDivider} />
+              {/* Divider */}
+              <View style={styles.roundDivider} />
 
-            {/* Round 3 */}
-            <View style={styles.roundSection}>
-              <TouchableOpacity
-                style={styles.roundHeader}
-                onPress={() => toggleRound(3)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.roundTitle}>Round 3</Text>
-                <View style={[
-                  styles.roundChevron,
-                  !expandedRounds[3] && styles.roundChevronCollapsed
-                ]}>
-                  <ChevronDownIcon width={24} height={24} />
-                </View>
-              </TouchableOpacity>
+              {/* Round 3 */}
+              <View style={styles.roundSection}>
+                <TouchableOpacity
+                  style={styles.roundHeader}
+                  onPress={() => toggleRound(3)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.roundTitle}>Round 3</Text>
+                  <View style={[
+                    styles.roundChevron,
+                    !expandedRounds[3] && styles.roundChevronCollapsed
+                  ]}>
+                    <ChevronDownIcon width={24} height={24} />
+                  </View>
+                </TouchableOpacity>
 
-              <Animated.View
-                style={[
-                  styles.roundContent,
-                  {
-                    maxHeight: roundAnimations[3].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 2000],
-                    }),
-                    opacity: roundAnimations[3],
-                    overflow: 'hidden',
-                  },
-                ]}
-              >
+                <Animated.View
+                  style={[
+                    styles.roundContent,
+                    {
+                      maxHeight: roundAnimations[3].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 2000],
+                      }),
+                      opacity: roundAnimations[3],
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   {/* Group Filter Chips */}
                   {tournament.groups && tournament.groups.length > 1 && (
                     <FilterChips
@@ -1597,82 +1926,219 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
                         />
                       ))}
                   </View>
-              </Animated.View>
-            </View>
+                </Animated.View>
+              </View>
 
-            {/* Divider */}
-            <View style={styles.roundDivider} />
+              {/* Divider */}
+              <View style={styles.roundDivider} />
 
-            {/* Knock out */}
-            <View style={styles.roundSection}>
-              <TouchableOpacity
-                style={styles.roundHeader}
-                onPress={() => toggleRound(4)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.roundTitle}>Knock out</Text>
-                <View style={[
-                  styles.roundChevron,
-                  !expandedRounds[4] && styles.roundChevronCollapsed
-                ]}>
-                  <ChevronDownIcon width={24} height={24} />
-                </View>
-              </TouchableOpacity>
+              {/* Knock out */}
+              <View style={styles.roundSection}>
+                <TouchableOpacity
+                  style={styles.roundHeader}
+                  onPress={() => toggleRound(4)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.roundTitle}>Knock out</Text>
+                  <View style={[
+                    styles.roundChevron,
+                    !expandedRounds[4] && styles.roundChevronCollapsed
+                  ]}>
+                    <ChevronDownIcon width={24} height={24} />
+                  </View>
+                </TouchableOpacity>
 
-              <Animated.View
-                style={[
-                  styles.roundContent,
-                  {
-                    maxHeight: roundAnimations[4].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 200],
-                    }),
-                    opacity: roundAnimations[4],
-                    overflow: 'hidden',
-                  },
-                ]}
-              >
-                  <Text style={styles.tbdText}>TBD</Text>
-              </Animated.View>
-            </View>
+                <Animated.View
+                  style={[
+                    styles.roundContent,
+                    {
+                      maxHeight: roundAnimations[4].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 600],
+                      }),
+                      opacity: roundAnimations[4],
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
+                  <View style={styles.matchesList}>
+                    {(() => {
+                      const knockoutMatches = tournament.matches?.filter(match => match.round === 'semifinal') || [];
+                      console.log('🏆 Knockout matches found:', knockoutMatches.length, knockoutMatches);
+                      return knockoutMatches.map((match, index) => {
+                        // Check if this is a placeholder match (TBD)
+                        const isPlaceholder = match.team1?.player1?.uid === 'placeholder';
 
-            {/* Divider */}
-            <View style={styles.roundDivider} />
+                        return (
+                          <MatchCard
+                            key={match.id || index}
+                            variant={isPlaceholder ? "placeholder" : "before"}
+                            leftTeam={match.team1}
+                            rightTeam={match.team2}
+                            tournamentName={match.tournamentName}
+                            status={match.status}
+                            location={match.location}
+                            court={match.court || 'TBD'}
+                            isPast={isMatchPast(match)}
+                            score={match.score}
+                            scoreRecorded={match.scoreRecorded || false}
+                            onAddScore={!isPlaceholder ? () => handleAddScore(match) : undefined}
+                            canRecord={!isPlaceholder && canRecordScore(match)}
+                            highlightBorder={!isPlaceholder && isUserMatch(match)}
+                            onPress={!isPlaceholder ? () => {
+                              const transformedMatch = {
+                                ...match,
+                                leftTeam: match.team1,
+                                rightTeam: match.team2,
+                                isPast: isMatchPast(match),
+                                tournamentId: tournament?.id,
+                              };
+                              navigation.navigate('MatchDetails', { match: transformedMatch });
+                            } : undefined}
+                            animationIndex={null}
+                          />
+                        );
+                      });
+                    })()}
+                  </View>
+                </Animated.View>
+              </View>
 
-            {/* Finals */}
-            <View style={styles.roundSection}>
-              <TouchableOpacity
-                style={styles.roundHeader}
-                onPress={() => toggleRound(5)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.roundTitle}>Finals</Text>
-                <View style={[
-                  styles.roundChevron,
-                  !expandedRounds[5] && styles.roundChevronCollapsed
-                ]}>
-                  <ChevronDownIcon width={24} height={24} />
-                </View>
-              </TouchableOpacity>
+              {/* Divider */}
+              <View style={styles.roundDivider} />
 
-              <Animated.View
-                style={[
-                  styles.roundContent,
-                  {
-                    maxHeight: roundAnimations[5].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 200],
-                    }),
-                    opacity: roundAnimations[5],
-                    overflow: 'hidden',
-                  },
-                ]}
-              >
-                  <Text style={styles.tbdText}>TBD</Text>
-              </Animated.View>
+              {/* Finals */}
+              <View style={styles.roundSection}>
+                <TouchableOpacity
+                  style={styles.roundHeader}
+                  onPress={() => toggleRound(5)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.roundTitle}>Finals</Text>
+                  <View style={[
+                    styles.roundChevron,
+                    !expandedRounds[5] && styles.roundChevronCollapsed
+                  ]}>
+                    <ChevronDownIcon width={24} height={24} />
+                  </View>
+                </TouchableOpacity>
+
+                <Animated.View
+                  style={[
+                    styles.roundContent,
+                    {
+                      maxHeight: roundAnimations[5].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 300],
+                      }),
+                      opacity: roundAnimations[5],
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
+                  <View style={styles.matchesList}>
+                    {(() => {
+                      const finalMatches = tournament.matches?.filter(match => match.round === 'final') || [];
+                      console.log('🏆 Final matches found:', finalMatches.length, finalMatches);
+                      return finalMatches.map((match, index) => {
+                        // Check if this is a placeholder match (TBD)
+                        const isPlaceholder = match.team1?.player1?.uid === 'placeholder';
+
+                        return (
+                          <MatchCard
+                            key={match.id || index}
+                            variant={isPlaceholder ? "placeholder" : "before"}
+                            leftTeam={match.team1}
+                            rightTeam={match.team2}
+                            tournamentName={match.tournamentName}
+                            status={match.status}
+                            location={match.location}
+                            court={match.court || 'TBD'}
+                            isPast={isMatchPast(match)}
+                            score={match.score}
+                            scoreRecorded={match.scoreRecorded || false}
+                            onAddScore={!isPlaceholder ? () => handleAddScore(match) : undefined}
+                            canRecord={!isPlaceholder && canRecordScore(match)}
+                            highlightBorder={!isPlaceholder && isUserMatch(match)}
+                            onPress={!isPlaceholder ? () => {
+                              const transformedMatch = {
+                                ...match,
+                                leftTeam: match.team1,
+                                rightTeam: match.team2,
+                                isPast: isMatchPast(match),
+                                tournamentId: tournament?.id,
+                              };
+                              navigation.navigate('MatchDetails', { match: transformedMatch });
+                            } : undefined}
+                            animationIndex={null}
+                          />
+                        );
+                      });
+                    })()}
+                  </View>
+                </Animated.View>
+              </View>
             </View>
           </View>
         )}
+
+        {/* Table Tab Content - Show for any stage that has groups (GROUP STAGE, KNOCKOUT, FINALS, FINISHED) */}
+        {activeTab === 'Table' && tournament && ['GROUP STAGE', 'KNOCKOUT', 'FINALS', 'FINISHED'].includes(tournament.status) && tournament.groups && Array.isArray(tournament.groups) && tournament.groups.length > 0 && (() => {
+          // Get the selected group
+          const selectedGroup = tournament.groups.find(g => g.name === selectedTableGroup);
+          const standings = selectedGroup ? calculateStandings(selectedGroup.id) : [];
+
+          return (
+            <View>
+              <View style={styles.tableContainer}>
+                {/* Group Filter Chips */}
+                <FilterChips
+                  chips={tournament.groups.map(group => group.name)}
+                  activeChip={selectedTableGroup}
+                  onChipPress={(groupName) => {
+                    setSelectedTableGroup(groupName);
+                  }}
+                />
+
+                {/* Standings Table */}
+                <Card style={styles.standingsCard}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.tableHeaderTeam]}>Team</Text>
+                    <Text style={styles.tableHeaderText}>P</Text>
+                    <Text style={styles.tableHeaderText}>W</Text>
+                    <Text style={styles.tableHeaderText}>D</Text>
+                    <Text style={styles.tableHeaderText}>L</Text>
+                    <Text style={styles.tableHeaderText}>GD</Text>
+                    <Text style={styles.tableHeaderText}>Pts</Text>
+                  </View>
+
+                  {/* Team Rows - Actual Data */}
+                  {standings.map((standing, index) => (
+                    <React.Fragment key={index}>
+                      {index > 0 && <View style={styles.tableDivider} />}
+                      <View style={styles.tableRow}>
+                        <View style={styles.teamCell}>
+                          <Team
+                            player1={standing.team.player1}
+                            player2={standing.team.player2}
+                            align="left"
+                          />
+                        </View>
+                        <Text style={styles.statText}>{standing.played}</Text>
+                        <Text style={styles.statText}>{standing.won}</Text>
+                        <Text style={styles.statText}>{standing.drawn}</Text>
+                        <Text style={styles.statText}>{standing.lost}</Text>
+                        <Text style={styles.statText}>{standing.gameDiff > 0 ? `+${standing.gameDiff}` : standing.gameDiff}</Text>
+                        <Text style={styles.pointsText}>{standing.points}</Text>
+                      </View>
+                    </React.Fragment>
+                  ))}
+                </Card>
+              </View>
+            </View>
+          );
+        })()}
       </ScrollView>
 
       {/* Sticky Bottom Button - Only show during REGISTRATION phase */}
@@ -1712,6 +2178,8 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
         </>
       )}
 
+
+
       {/* Create Team Bottom Sheet */}
       <CreateTeamBottomSheet
         visible={showCreateTeamSheet}
@@ -1743,14 +2211,15 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       />
 
       {/* Edit Tournament Modal */}
-      <CreateTournamentModal
-        key={`edit-modal-${tournament?.id}`}
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onTournamentCreated={handleTournamentUpdated}
-        editMode={true}
-        tournament={tournament}
-      />
+      {showEditModal && (
+        <CreateTournamentModal
+          visible={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onTournamentCreated={handleTournamentUpdated}
+          editMode={true}
+          tournament={tournament}
+        />
+      )}
 
       {/* Start Tournament Bottom Sheet */}
       <StartTournamentBottomSheet
@@ -1776,11 +2245,9 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
       <Modal
         visible={showFormatInfoSheet}
         animationType="slide"
-        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
-        transparent={Platform.OS === 'android'}
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowFormatInfoSheet(false)}
       >
-        {Platform.OS === 'android' && <View style={styles.modalBackdrop} />}
         <SafeAreaView style={styles.formatInfoContainer} edges={['top']}>
           {/* Swipe Indicator */}
           <View style={styles.handleContainer}>
@@ -2060,8 +2527,66 @@ const styles = StyleSheet.create({
     color: Colors.primary300,
     lineHeight: Typography.body200 * 1.5,
   },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  // Table Tab Styles
+  tableContainer: {
+    flex: 1,
+    // No gap needed - FilterChips component has marginBottom: Spacing.space2 (8px)
+  },
+  standingsCard: {
+    padding: 0,
+    overflow: 'hidden', // Ensures content respects border radius
+    borderRadius: BorderRadius.radius3, // 12px to match other cards
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.space4, // 16px
+    paddingVertical: Spacing.space3,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  tableHeaderText: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body300,
+    color: Colors.neutral400,
+    width: 32,
+    textAlign: 'center',
+  },
+  tableHeaderTeam: {
+    flex: 1,
+    textAlign: 'left',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start', // Align to top
+    paddingHorizontal: Spacing.space4, // 16px
+    paddingTop: Spacing.space4, // 16px spacing from header
+    paddingBottom: Spacing.space4, // 16px spacing to next row or bottom
+    minHeight: 80,
+  },
+  tableDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.space4, // 16px to match card padding
+  },
+  teamCell: {
+    flex: 1,
+  },
+  statText: {
+    fontFamily: 'GeneralSans-Medium',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+    width: 32,
+    textAlign: 'center',
+    paddingTop: Spacing.space1, // Slight top padding to align with player names
+  },
+  pointsText: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+    width: 32,
+    textAlign: 'center',
+    paddingTop: Spacing.space1, // Slight top padding to align with player names
   },
 });

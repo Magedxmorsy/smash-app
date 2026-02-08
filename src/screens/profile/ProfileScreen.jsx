@@ -14,11 +14,11 @@ import Avatar from '../../components/ui/Avatar';
 import LinkButton from '../../components/ui/LinkButton';
 import EmptyState from '../../components/ui/EmptyState';
 import EditProfileModal from '../../components/profile/EditProfileModal';
+import Banner from '../../components/ui/Banner';
 import SettingsIcon from '../../../assets/icons/settings.svg';
-import EditIcon from '../../../assets/icons/edit.svg';
 
 export default function ProfileScreen({ navigation, onCreateAccount }) {
-  const { userData, isAuthenticated } = useAuth();
+  const { userData, isAuthenticated, isEmailVerified } = useAuth();
   const { tournaments: allTournaments, getHostedTournaments, getJoinedTournaments } = useTournaments();
   const [activeTab, setActiveTab] = useState('Hosted');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -138,6 +138,7 @@ export default function ProfileScreen({ navigation, onCreateAccount }) {
         scrollEventThrottle={16}
       >
 
+
         {/* Profile Info */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
@@ -154,12 +155,21 @@ export default function ProfileScreen({ navigation, onCreateAccount }) {
 
           <LinkButton
             title="Edit profile"
-            icon={<EditIcon />}
             onPress={() => setShowEditModal(true)}
             variant="neutral"
-            iconSize={20}
           />
         </View>
+
+        {/* Email Verification Banner */}
+        {!isEmailVerified && (
+          <View style={styles.bannerContainer}>
+            <Banner
+              variant="warning"
+              message="Verify your email. We sent a verification link to your email. Check your inbox."
+              dismissible={false}
+            />
+          </View>
+        )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -288,11 +298,15 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: Spacing.space4,
   },
+  bannerContainer: {
+    marginHorizontal: Spacing.space4,
+    marginBottom: Spacing.space4,
+  },
   profileSection: {
     alignItems: 'center',
     paddingHorizontal: Spacing.space4,
     paddingTop: 0,
-    marginBottom: Spacing.space6,
+    marginBottom: Spacing.space4,
   },
   avatarContainer: {
     marginBottom: Spacing.space3,

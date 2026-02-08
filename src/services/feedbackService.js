@@ -14,16 +14,16 @@ export const submitFeedback = async (feedbackData) => {
   try {
     // Validate required fields
     const { type, subject, message } = feedbackData;
-    
-    if (!type || !subject || !message) {
+
+    if (!type || !message) {
       return {
         success: false,
         error: 'Please fill in all required fields'
       };
     }
 
-    // Validate field lengths
-    if (subject.length > 100) {
+    // Validate field lengths (subject is optional)
+    if (subject && subject.length > 100) {
       return {
         success: false,
         error: 'Subject must be less than 100 characters'

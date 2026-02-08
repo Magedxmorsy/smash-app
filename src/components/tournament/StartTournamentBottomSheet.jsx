@@ -112,160 +112,160 @@ export default function StartTournamentBottomSheet({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
-      transparent={Platform.OS === 'android'}
+      presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      {Platform.OS === 'android' && <View style={styles.backdrop} />}
-      <View style={styles.container}>
-        {/* Swipe Indicator */}
-        <View style={styles.swipeIndicator} />
+      <View style={styles.modalWrapper}>
+        <View style={styles.container}>
+          {/* Swipe Indicator */}
+          <View style={styles.swipeIndicator} />
 
-        {/* Header with Close Button */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <CloseIcon width={32} height={32} />
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Start tournament</Text>
+          {/* Header with Close Button */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <CloseIcon width={32} height={32} />
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Start tournament</Text>
+            </View>
+            <View style={styles.closeButton} />
           </View>
-          <View style={styles.closeButton} />
-        </View>
 
-        {/* PREVIEW STATE */}
-        {modalState === 'preview' && scheduleInfo && (
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.subtitle}>
-              Review all the tournament matches scheduling details then tap on generating groups
-            </Text>
+          {/* PREVIEW STATE */}
+          {modalState === 'preview' && scheduleInfo && (
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.subtitle}>
+                Review all the tournament matches scheduling details then tap on generate groups
+              </Text>
 
-            {/* Scheduling Details Card */}
-            <Card style={styles.detailsCard}>
-              <View style={styles.detailsContainer}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Courts</Text>
-                  <Text style={styles.detailValue}>{scheduleInfo.courtsList}</Text>
+              {/* Scheduling Details Card */}
+              <Card style={styles.detailsCard}>
+                <View style={styles.detailsContainer}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Courts</Text>
+                    <Text style={styles.detailValue}>{scheduleInfo.courtsList}</Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Match duration</Text>
+                    <Text style={styles.detailValue}>{scheduleInfo.matchDuration}min</Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Number of matches</Text>
+                    <Text style={styles.detailValue}>{scheduleInfo.totalMatches}</Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Total time (Group stage)</Text>
+                    <Text style={styles.detailValue}>{scheduleInfo.totalTimeFormatted}</Text>
+                  </View>
                 </View>
+              </Card>
 
-                <View style={styles.divider} />
-
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Match duration</Text>
-                  <Text style={styles.detailValue}>{scheduleInfo.matchDuration}min</Text>
+              {/* Warning Banner for Limited Courts */}
+              {scheduleInfo.isLimited && (
+                <View style={styles.bannerContainer}>
+                  <Banner
+                    variant="warning"
+                    message={`Not all matches can play at once. Teams will take turns using available courts.`}
+                    dismissible={false}
+                  />
                 </View>
+              )}
+            </ScrollView>
+          )}
 
-                <View style={styles.divider} />
+          {/* LOADING STATE */}
+          {modalState === 'loading' && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary300} />
+              <Text style={styles.loadingText}>Generating groups</Text>
+            </View>
+          )}
 
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Number of matches</Text>
-                  <Text style={styles.detailValue}>{scheduleInfo.totalMatches}</Text>
+          {/* GROUPS PREVIEW STATE */}
+          {modalState === 'groups' && generatedGroups && (
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.subtitle}>
+                Review the generated groups before starting your tournament
+              </Text>
+
+              {generatedGroups.map((group, groupIndex) => (
+                <View key={group.id} style={styles.groupSection}>
+                  <Text style={styles.groupName}>{group.name}</Text>
+                  <View style={styles.teamsContainer}>
+                    {group.teams
+                      .filter(team => team && team.player1 && team.player2)
+                      .map((team, teamIndex) => (
+                        <View key={teamIndex} style={styles.teamItem}>
+                          <Player
+                            firstName={team.player1.firstName}
+                            lastName={team.player1.lastName}
+                            avatarUri={team.player1.avatarUri}
+                            align="left"
+                          />
+                          <Player
+                            firstName={team.player2.firstName}
+                            lastName={team.player2.lastName}
+                            avatarUri={team.player2.avatarUri}
+                            align="right"
+                          />
+                        </View>
+                      ))}
+                  </View>
                 </View>
+              ))}
+            </ScrollView>
+          )}
 
-                <View style={styles.divider} />
-
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Total time</Text>
-                  <Text style={styles.detailValue}>{scheduleInfo.totalTimeFormatted}</Text>
-                </View>
-              </View>
-            </Card>
-
-            {/* Warning Banner for Limited Courts */}
-            {scheduleInfo.isLimited && (
-              <View style={styles.bannerContainer}>
-                <Banner
-                  variant="warning"
-                  message={`Matches will be played in ${scheduleInfo.timeSlotsNeeded} time slots as you have limited courts.`}
-                  dismissible={false}
+          {/* Footer with Buttons */}
+          <View style={[styles.footer, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 24 : 0) }]}>
+            {modalState === 'preview' && (
+              <>
+                <Text style={styles.disclaimer}>
+                  By pressing "Generate groups" you will generate groups randomly
+                </Text>
+                <Button
+                  title="Generate groups"
+                  variant="accent"
+                  size="large"
+                  onPress={handleGenerateGroups}
                 />
-              </View>
+              </>
             )}
 
-            {/* Bottom Disclaimer */}
-            <Text style={styles.disclaimer}>
-              By pressing "Generate groups" you will generate groups randomly, lock team registration and schedule all matches
-            </Text>
-          </ScrollView>
-        )}
-
-        {/* LOADING STATE */}
-        {modalState === 'loading' && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary300} />
-            <Text style={styles.loadingText}>Generating groups</Text>
+            {modalState === 'groups' && (
+              <>
+                <Button
+                  title="Confirm and start"
+                  variant="accent"
+                  size="large"
+                  onPress={handleConfirmAndStart}
+                />
+                <Button
+                  title="Regenerate"
+                  variant="ghost"
+                  size="large"
+                  onPress={handleRegenerate}
+                />
+              </>
+            )}
           </View>
-        )}
-
-        {/* GROUPS PREVIEW STATE */}
-        {modalState === 'groups' && generatedGroups && (
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.subtitle}>
-              Review the generated groups before starting your tournament
-            </Text>
-
-            {generatedGroups.map((group, groupIndex) => (
-              <View key={group.id} style={styles.groupSection}>
-                <Text style={styles.groupName}>{group.name}</Text>
-                <View style={styles.teamsContainer}>
-                  {group.teams
-                    .filter(team => team && team.player1 && team.player2)
-                    .map((team, teamIndex) => (
-                      <View key={teamIndex} style={styles.teamItem}>
-                        <Player
-                          firstName={team.player1.firstName}
-                          lastName={team.player1.lastName}
-                          avatarUri={team.player1.avatarUri}
-                          align="left"
-                        />
-                        <Player
-                          firstName={team.player2.firstName}
-                          lastName={team.player2.lastName}
-                          avatarUri={team.player2.avatarUri}
-                          align="right"
-                        />
-                      </View>
-                    ))}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-
-        {/* Footer with Buttons */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
-          {modalState === 'preview' && (
-            <Button
-              title="Generate groups"
-              variant="accent"
-              size="large"
-              onPress={handleGenerateGroups}
-            />
-          )}
-
-          {modalState === 'groups' && (
-            <>
-              <Button
-                title="Confirm and start"
-                variant="accent"
-                size="large"
-                onPress={handleConfirmAndStart}
-              />
-              <Button
-                title="Regenerate"
-                variant="ghost"
-                size="large"
-                onPress={handleRegenerate}
-              />
-            </>
-          )}
         </View>
       </View>
     </Modal>
@@ -273,13 +273,25 @@ export default function StartTournamentBottomSheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modalWrapper: {
+    flex: 1,
+    ...Platform.select({
+      android: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent backdrop
+        justifyContent: 'flex-end',
+      },
+    }),
   },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    ...Platform.select({
+      android: {
+        borderTopLeftRadius: BorderRadius.radius6,
+        borderTopRightRadius: BorderRadius.radius6,
+        overflow: 'hidden',
+      },
+    }),
   },
   swipeIndicator: {
     width: Spacing.space10,
@@ -326,6 +338,8 @@ const styles = StyleSheet.create({
     color: Colors.primary300,
     marginBottom: Spacing.space4,
     textAlign: 'center',
+    maxWidth: '85%',
+    alignSelf: 'center',
   },
   detailsCard: {
     marginBottom: Spacing.space3,
@@ -363,6 +377,9 @@ const styles = StyleSheet.create({
     color: Colors.neutral400,
     textAlign: 'center',
     lineHeight: Typography.body300 * 1.5,
+    marginBottom: Spacing.space2,
+    maxWidth: '80%',
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,

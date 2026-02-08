@@ -5,6 +5,7 @@
 import {
   scheduleMatches,
   getSchedulingSummary,
+  calculateRoundDuration,
   parseCourts,
   groupMatchesByTimeSlot,
   needsScheduling,
@@ -218,6 +219,39 @@ describe('getSchedulingSummary', () => {
 
     expect(result.totalDurationMinutes).toBe(65);
     expect(result.totalDurationFormatted).toBe('1h 5m');
+  });
+});
+
+describe('calculateRoundDuration', () => {
+  it('calculates duration when courts are sufficient', () => {
+    // 4 matches, 4 courts = 1 time slot needed
+    expect(calculateRoundDuration(4, 4, 30, 15)).toBe(45); // 1 slot × 45 min
+  });
+
+  it('calculates duration when courts are limited', () => {
+    // 4 matches, 3 courts = 2 time slots needed (3 matches in slot 1, 1 match in slot 2)
+    expect(calculateRoundDuration(4, 3, 30, 15)).toBe(90); // 2 slots × 45 min
+  });
+
+  it('calculates duration for extreme limitation', () => {
+    // 6 matches, 1 court = 6 time slots needed (all matches sequential)
+    expect(calculateRoundDuration(6, 1, 30, 15)).toBe(270); // 6 slots × 45 min
+  });
+
+  it('handles edge case with 1 match', () => {
+    // 1 match, 3 courts = 1 time slot needed
+    expect(calculateRoundDuration(1, 3, 30, 15)).toBe(45); // 1 slot × 45 min
+  });
+
+  it('handles edge case with more courts than matches', () => {
+    // 2 matches, 5 courts = 1 time slot needed (all matches simultaneous)
+    expect(calculateRoundDuration(2, 5, 30, 15)).toBe(45); // 1 slot × 45 min
+  });
+
+  it('calculates correctly with custom match duration and buffer', () => {
+    // 3 matches, 2 courts, 20 min match, 10 min buffer
+    // = 2 time slots (2 matches in slot 1, 1 match in slot 2)
+    expect(calculateRoundDuration(3, 2, 20, 10)).toBe(60); // 2 slots × 30 min
   });
 });
 

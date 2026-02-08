@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const TournamentFormContext = createContext();
 
@@ -11,6 +11,7 @@ export function TournamentFormProvider({ children, initialData = null }) {
   const [format, setFormat] = useState(initialData?.format || 'World cup');
   const [teamCount, setTeamCount] = useState(initialData?.teamCount || null);
   const [rules, setRules] = useState(initialData?.rules || '');
+  const [matchDuration, setMatchDuration] = useState(initialData?.matchDuration || 30);
   const [joinAsPlayer, setJoinAsPlayer] = useState(initialData?.joinAsPlayer ?? true);
 
   const [errors, setErrors] = useState({
@@ -20,6 +21,36 @@ export function TournamentFormProvider({ children, initialData = null }) {
     time: '',
     teamCount: '',
   });
+
+  // Update form state when initialData changes (for edit mode)
+  // Use initialData.id as dependency to avoid unnecessary updates on object reference changes
+  useEffect(() => {
+    if (initialData) {
+      const parsedDate = initialData.dateTime ? new Date(initialData.dateTime) : null;
+
+      console.log('🔄 TournamentFormProvider: Updating form with initialData', {
+        tournamentId: initialData.id,
+        name: initialData.name,
+        location: initialData.location,
+        dateTimeISO: initialData.dateTime,
+        parsedDate: parsedDate,
+        parsedDateLocal: parsedDate?.toString()
+      });
+
+      setTournamentName(initialData.name || '');
+      setLocation(initialData.location || '');
+      setCourtNumbers(initialData.courts || '');
+      setDate(parsedDate);
+      setTime(parsedDate);
+      setFormat(initialData.format || 'World cup');
+      setTeamCount(initialData.teamCount || null);
+      setTeamCount(initialData.teamCount || null);
+      setRules(initialData.rules || '');
+      setMatchDuration(initialData.matchDuration || 30);
+      setJoinAsPlayer(initialData.joinAsPlayer ?? true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData?.id]);
 
   const formData = {
     tournamentName,
@@ -38,6 +69,8 @@ export function TournamentFormProvider({ children, initialData = null }) {
     setTeamCount,
     rules,
     setRules,
+    matchDuration,
+    setMatchDuration,
     joinAsPlayer,
     setJoinAsPlayer,
     errors,

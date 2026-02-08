@@ -7,22 +7,22 @@ import { useTournamentForm } from '../../contexts/TournamentFormContext';
 import { Spacing } from '../../constants/Spacing';
 import CheckIcon from '../../../assets/icons/check.svg';
 
-export default function RulesFormScreen({ onNavigate, navigation }) {
+export default function RulesFormScreen({ onNavigate, navigation, onSave }) {
   const insets = useSafeAreaInsets();
   const { rules, setRules } = useTournamentForm();
   const [tempRules, setTempRules] = React.useState(rules);
 
-  // Auto-save rules when component unmounts (when navigating away)
-  React.useEffect(() => {
-    return () => {
-      setRules(tempRules);
-    };
-  }, [tempRules, setRules]);
-
-  const handleSave = () => {
+  const handleSave = React.useCallback(() => {
     setRules(tempRules);
-    onNavigate('main');
-  };
+    onNavigate('main', 'back');
+  }, [tempRules, setRules, onNavigate]);
+
+  // Expose handleSave to parent via onSave callback
+  React.useEffect(() => {
+    if (onSave) {
+      onSave(handleSave);
+    }
+  }, [handleSave, onSave]);
 
   return (
     <ScrollView

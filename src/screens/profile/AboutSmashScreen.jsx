@@ -29,47 +29,56 @@ export default function AboutSmashScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.version}>Version 1.0.0</Text>
+    
 
-        <Text style={styles.sectionTitle}>Our story</Text>
+        <Text style={styles.sectionTitle}>The origin story</Text>
         <Text style={styles.paragraph}>
-          Smash was born from a simple idea: competitive gaming with friends should be easy, organized, and fun.
+          Picture this: It's Saturday night. Your crew is ready to settle who's actually the best at Padel.
         </Text>
         <Text style={styles.paragraph}>
-          It all started during a weekend gaming session among friends. We were trying to organize a tournament, but keeping track of brackets, schedules, and scores turned into a chaotic mess of group chats and spreadsheets. We realized there had to be a better way.
+          Fast forward 30 minutes: You're drowning in a WhatsApp group chat with 47 unread messages, someone's Excel bracket looks like abstract art, and nobody knows who's playing who or when. Sound familiar?
         </Text>
         <Text style={styles.paragraph}>
-          That's when we decided to build Smash—a platform designed specifically for friends who want to turn their casual game nights into epic tournaments. No corporate sponsors, no prize pools, just pure competition and bragging rights.
-        </Text>
-
-        <Text style={styles.sectionTitle}>What we believe</Text>
-        <Text style={styles.paragraph}>
-          We believe that the best competitions happen between friends. Whether it's a fighting game showdown, a sports tournament, or any other head-to-head competition, organizing it shouldn't be harder than actually playing.
-        </Text>
-        <Text style={styles.paragraph}>
-          Smash puts the power of tournament organization in your hands. Create brackets, track scores, schedule matches, and keep everyone in the loop—all in one place. We're not here to host tournaments for you; we're here to give you the tools to be the tournament master your friend group deserves.
+          That's when we said "screw it" and built Smash. Because organizing a tournament with friends shouldn't require a PhD in spreadsheets or the patience of a saint.
         </Text>
 
-        <Text style={styles.sectionTitle}>Our mission</Text>
+        <Text style={styles.sectionTitle}>What we're about</Text>
         <Text style={styles.paragraph}>
-          To make competitive gaming accessible and enjoyable for everyone. We're building tools that help friends create memorable moments, settle debates, and crown champions—one tournament at a time.
+          Smash isn't for esports pros or wannabe streamers. It's for you and your chaotic friend group who just want to know: who's actually better?
+        </Text>
+        <Text style={styles.paragraph}>
+          We're talking real stakes here. Bragging rights. Eternal glory. That one friend who won't shut up about their win until next year's rematch.
+        </Text>
+        <Text style={styles.paragraph}>
+          No sponsors. No prize pools. No BS. Just you, your friends, and the pure, unfiltered competition that settles arguments and creates legends.
         </Text>
 
-        <Text style={styles.sectionTitle}>Contact us</Text>
+        <Text style={styles.sectionTitle}>The mission (if you want to call it that)</Text>
         <Text style={styles.paragraph}>
-          Have feedback, suggestions, or just want to say hi? We'd love to hear from you!
+          Make tournament organization so stupid-simple that you spend less time managing brackets and more time trash-talking your opponents.
         </Text>
         <Text style={styles.paragraph}>
-          Email: info@getsmash.net
-        </Text>
-
-        <Text style={styles.sectionTitle}>Credits</Text>
-        <Text style={styles.paragraph}>
-          Made with ❤️ by gamers, for gamers.
+          Because at the end of the day, the best tournaments are the ones where everyone's having too much fun to care that it's 3 AM and you're still going.
         </Text>
 
+        <Text style={styles.sectionTitle}>Hit us up</Text>
+        <Text style={styles.paragraph}>
+          Got feedback? Found a bug? Want to tell us your tournament victory story? We're all ears.
+        </Text>
+        <Text style={styles.paragraph}>
+          Email: hello@getsmash.net
+        </Text>
+        <Text style={styles.paragraph}>
+          (We actually read these. No robots. Promise.)
+        </Text>
+
+        <Text style={styles.sectionTitle}>The fine print</Text>
+        <Text style={styles.paragraph}>
+          Crafted with caffeine and questionable decisions in Amsterdam.
+        </Text>
+<Text style={styles.version}>Version 1.0.0</Text>
         <Text style={styles.copyright}>
-          © 2025 SmashApp. All rights reserved.
+          © 2025 SmashApp. All rights reserved. Now go organize something.
         </Text>
       </ScrollView>
     </View>

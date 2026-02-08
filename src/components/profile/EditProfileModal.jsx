@@ -7,12 +7,11 @@ import Avatar from '../ui/Avatar';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import LinkButton from '../ui/LinkButton';
-import { Spacing } from '../../constants/Spacing';
+import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import CloseIcon from '../../../assets/icons/close.svg';
-import ChangeIcon from '../../../assets/icons/change.svg';
 
 export default function EditProfileModal({ visible, onClose }) {
   const { userData, updateUserData } = useAuth();
@@ -125,77 +124,75 @@ export default function EditProfileModal({ visible, onClose }) {
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
-      transparent={Platform.OS === 'android'}
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      {Platform.OS === 'android' && <View style={styles.backdrop} />}
-      <View style={styles.container}>
-        {/* Swipe Handle */}
-        <View style={styles.handleContainer}>
-          <View style={styles.handle} />
-        </View>
+      <View style={styles.modalWrapper}>
+        <View style={styles.container}>
+          {/* Swipe Handle */}
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.headerIcon}>
-            <CloseIcon width={32} height={32} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit profile</Text>
-          <View style={styles.headerIcon} />
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.headerIcon}>
+              <CloseIcon width={32} height={32} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Edit profile</Text>
+            <View style={styles.headerIcon} />
+          </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Avatar Section */}
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarContainer}>
-              <Avatar
-                size="large"
-                source={avatarUri}
-                name={`${firstName} ${lastName}`}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Avatar Section */}
+            <View style={styles.avatarSection}>
+              <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+                <Avatar
+                  size="large"
+                  source={avatarUri}
+                  name={`${firstName} ${lastName}`}
+                />
+              </TouchableOpacity>
+              <LinkButton
+                title="Change photo"
+                onPress={pickImage}
+                variant="neutral"
               />
             </View>
-            <LinkButton
-              title="Change photo"
-              icon={<ChangeIcon />}
-              onPress={pickImage}
-              variant="neutral"
-              iconSize={24}
+
+            {/* Form Fields */}
+            <View style={styles.formSection}>
+              <Input
+                label="First name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Enter your first name"
+                autoCapitalize="words"
+              />
+              <Input
+                label="Last name"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Enter your last name"
+                autoCapitalize="words"
+              />
+            </View>
+          </ScrollView>
+
+          {/* Save Button */}
+          <View style={[styles.buttonContainer, { paddingBottom: insets.bottom + (Platform.OS === 'android' ? 24 : 0) }]}>
+            <Button
+              title="Save changes"
+              onPress={handleSave}
+              variant="primary"
+              loading={isSaving}
+              fullWidth
             />
           </View>
-
-          {/* Form Fields */}
-          <View style={styles.formSection}>
-            <Input
-              label="First name"
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="Enter your first name"
-              autoCapitalize="words"
-            />
-            <Input
-              label="Last name"
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Enter your last name"
-              autoCapitalize="words"
-            />
-          </View>
-        </ScrollView>
-
-        {/* Save Button */}
-        <View style={[styles.buttonContainer, { paddingBottom: insets.bottom }]}>
-          <Button
-            title="Save changes"
-            onPress={handleSave}
-            variant="primary"
-            loading={isSaving}
-            fullWidth
-          />
         </View>
       </View>
     </Modal>
@@ -203,15 +200,27 @@ export default function EditProfileModal({ visible, onClose }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modalWrapper: {
+    flex: 1,
+    ...Platform.select({
+      android: {
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent backdrop
+        justifyContent: 'flex-end',
+      },
+    }),
   },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.space4,
     paddingTop: Spacing.space2,
+    ...Platform.select({
+      android: {
+        borderTopLeftRadius: BorderRadius.radius6,
+        borderTopRightRadius: BorderRadius.radius6,
+        overflow: 'hidden',
+      },
+    }),
   },
   handleContainer: {
     alignItems: 'center',

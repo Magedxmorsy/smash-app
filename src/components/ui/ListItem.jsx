@@ -67,10 +67,14 @@ export default function ListItem({
           </View>
         )}
         <View style={styles.content}>
-          <Text style={[
-            value ? styles.label : styles.placeholder,
-            disabled && styles.labelDisabled
-          ]}>
+          <Text
+            style={[
+              value ? styles.label : styles.placeholder,
+              disabled && styles.labelDisabled
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {value || placeholder || label}
           </Text>
           {subtitle && !error && (

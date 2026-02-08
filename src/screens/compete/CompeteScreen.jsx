@@ -10,7 +10,7 @@ import TournamentCard from '../../components/tournament/TournamentCard';
 import Avatar from '../../components/ui/Avatar';
 import { Spacing } from '../../constants/Spacing';
 import { Typography } from '../../constants/Typography';
-import { createTestFinishedTournament } from '../../utils/createTestFinishedTournament';
+
 
 export default function CompeteScreen({ navigation, onCreateTournament }) {
   const { tournaments: allTournaments, getOngoingTournaments, getCompletedTournaments } = useTournaments();
@@ -48,24 +48,16 @@ export default function CompeteScreen({ navigation, onCreateTournament }) {
 
   const handleTournamentCreated = (tournament) => {
     // Navigate to the newly created tournament using its ID
-    // The TournamentDetailsScreen will fetch the fresh data from Firestore
+    // Pass the full tournament object as initial data to avoid loading delays
     if (tournament?.id) {
       navigation.navigate('TournamentDetails', {
         tournamentId: tournament.id,
+        tournament: tournament,
       });
     }
   };
 
-  // TEST FUNCTION - Create a finished tournament with winners
-  const handleCreateTestTournament = async () => {
-    const tournament = await createTestFinishedTournament(userData);
-    if (tournament) {
-      // Navigate to the test tournament to see winners banner
-      navigation.navigate('TournamentDetails', {
-        tournamentId: tournament.id,
-      });
-    }
-  };
+
 
   return (
     <View style={styles.container}>
@@ -164,16 +156,7 @@ export default function CompeteScreen({ navigation, onCreateTournament }) {
             );
           })}
 
-          {/* TEST BUTTON - Remove this after testing */}
-          <View style={styles.testButtonContainer}>
-            <Text style={styles.testLabel}>🧪 Test Winners Banner:</Text>
-            <Button
-              title="Create Test Finished Tournament"
-              onPress={handleCreateTestTournament}
-              variant="accent"
-              fullWidth={true}
-            />
-          </View>
+
         </ScrollView>
       )}
     </View>
@@ -194,20 +177,5 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.space4,
   },
-  testButtonContainer: {
-    marginTop: Spacing.space6,
-    padding: Spacing.space4,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.accent300,
-    borderStyle: 'dashed',
-  },
-  testLabel: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.body200,
-    color: Colors.primary300,
-    marginBottom: Spacing.space3,
-    textAlign: 'center',
-  },
+
 });

@@ -7,15 +7,22 @@ import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 
-export default function FormatFormScreen({ onNavigate }) {
+export default function FormatFormScreen({ onNavigate, onSave }) {
   const insets = useSafeAreaInsets();
   const { format, setFormat } = useTournamentForm();
   const [tempFormat, setTempFormat] = React.useState(format);
 
-  const handleSave = () => {
+  const handleSave = React.useCallback(() => {
     setFormat(tempFormat);
-    onNavigate('main');
-  };
+    onNavigate('main', 'back');
+  }, [tempFormat, setFormat, onNavigate]);
+
+  // Expose handleSave to parent via onSave callback
+  React.useEffect(() => {
+    if (onSave) {
+      onSave(handleSave);
+    }
+  }, [handleSave, onSave]);
 
   const formatOptions = [
     {
@@ -41,9 +48,6 @@ export default function FormatFormScreen({ onNavigate }) {
   const handleSelectFormat = (value, enabled) => {
     if (enabled) {
       setTempFormat(value);
-      // Auto-save and go back when selection is made
-      setFormat(value);
-      onNavigate('main');
     }
   };
 

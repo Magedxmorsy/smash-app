@@ -58,16 +58,8 @@ export default function Button({
   };
 
   const getSpinnerColor = () => {
-    switch (variant) {
-      case 'primary':
-      case 'secondary':
-        return Colors.surface; // White spinner
-      case 'accent':
-      case 'ghost':
-        return Colors.primary300; // Dark spinner
-      default:
-        return Colors.surface;
-    }
+    // Always use primary color for spinner
+    return Colors.primary300;
   };
 
   return (
@@ -98,19 +90,7 @@ export default function Button({
       }}
     >
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={getSpinnerColor()} />
-          {title && (
-            <Text style={[
-              styles.text,
-              size === 'medium' && styles.textMedium,
-              getTextStyle(),
-              styles.textLoading
-            ]}>
-              {title}
-            </Text>
-          )}
-        </View>
+        <ActivityIndicator size="small" color={getSpinnerColor()} />
       ) : (
         <Text style={[
           styles.text,
@@ -164,11 +144,16 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: 'GeneralSans-Semibold',
     fontSize: Typography.button, // 16px - for all buttons
-    lineHeight: Typography.button, // 100% line height
+    lineHeight: Typography.button * 1.3, // 130% line height to prevent clipping on Android
+    ...Platform.select({
+      android: {
+        includeFontPadding: false, // Remove extra padding on Android
+      },
+    }),
   },
   textMedium: {
     fontSize: Typography.button, // 16px - for small/medium buttons
-    lineHeight: Typography.button * 1.2, // Add some line height for better vertical centering
+    lineHeight: Typography.button * 1.3, // 130% line height
   },
   textLight: {
     color: Colors.surface, // White
@@ -178,13 +163,5 @@ const styles = StyleSheet.create({
   },
   textDisabled: {
     color: Colors.neutral400,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.space2,
-  },
-  textLoading: {
-    marginLeft: Spacing.space2,
   },
 });

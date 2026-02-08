@@ -10,10 +10,11 @@ export default function WinnersBanner({ tournament }) {
   if (tournament.status !== 'FINISHED') return null;
   if (!tournament.matches || !Array.isArray(tournament.matches)) return null;
 
-  // Find finals match (case-insensitive)
-  const finalsMatch = tournament.matches.find(
-    match => match.round?.toLowerCase() === 'finals'
-  );
+  // Find finals match (handles both 'final' and 'finals', case-insensitive)
+  const finalsMatch = tournament.matches.find(match => {
+    const round = String(match.round || '').toLowerCase();
+    return round === 'final' || round === 'finals';
+  });
 
   // Validate finals match exists and has winner
   if (!finalsMatch) return null;
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: Spacing.space3,
     minHeight: 64,
-    marginBottom: Spacing.space4,
+    marginBottom: Spacing.space6,
     position: 'relative',
     justifyContent: 'center',
     overflow: 'visible',

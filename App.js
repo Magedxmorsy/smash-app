@@ -27,7 +27,7 @@ const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
 // Deep linking configuration
 const linking = {
-  prefixes: ['smash://', 'https://getsmash.net'],
+  prefixes: ['smash://', 'https://getsmash.net', 'https://www.getsmash.net', 'https://getsmash.net/', 'https://www.getsmash.net/'],
   config: {
     screens: {
       HomeTab: {
@@ -61,7 +61,7 @@ function MainApp() {
   const [pendingVerification, setPendingVerification] = useState(null);
   const [pendingNewUser, setPendingNewUser] = useState(null); // Store email for new Firebase flow
   const [pendingAction, setPendingAction] = useState(null); // Store action to perform after auth
-  const { isAuthenticated, loading, refreshUserData, setIsSigningUp, isEmailVerified, userData } = useAuth();
+  const { isAuthenticated, loading, refreshUserData, setIsSigningUp, isEmailVerified, userData, setLocalUserData } = useAuth();
   const { showToast } = useToast();
   const wasAuthenticatedRef = useRef(false);
   const emailVerificationModalDismissedRef = useRef(false); // Track if user manually dismissed the modal
@@ -313,9 +313,16 @@ function MainApp() {
     console.log('🎯 [handleNewUserProfileComplete] completeUserProfile result:', { success, error });
 
     if (success) {
-      console.log('🎯 [handleNewUserProfileComplete] Refreshing user data...');
-      // Refresh user data to get the updated profile information
-      await refreshUserData();
+      console.log('🎯 [handleNewUserProfileComplete] Optimistically updating user data...');
+      setLocalUserData({
+        ...userData,
+        ...profileData,
+        profileComplete: true,
+        updatedAt: new Date().toISOString()
+      });
+
+      console.log('🎯 [handleNewUserProfileComplete] Refreshing user data (Skipped for performance/consistency)...');
+      // refreshUserData(); // SKIPPED: Rely on setLocalUserData to avoid stale reads
       console.log('🎯 [handleNewUserProfileComplete] User data refreshed');
 
       console.log('🎯 [handleNewUserProfileComplete] Resetting signup flag...');

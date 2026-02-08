@@ -24,11 +24,12 @@ import LocationIcon from '../../../assets/icons/location.svg';
 import ChevronDownIcon from '../../../assets/icons/chevrondown.svg';
 import RulesIcon from '../../../assets/icons/rules.svg';
 import VersusIcon from '../../../assets/icons/versus.svg';
+import EditIcon from '../../../assets/icons/edit.svg';
 
 export default function MatchDetailsScreen({ navigation, route }) {
   const { match: initialMatch } = route.params;
   const [match, setMatch] = useState(initialMatch);
-  const { updateTournament, tournaments } = useTournaments();
+  const { updateTournament, tournaments, checkAndProgressTournament } = useTournaments();
   const { showToast } = useToast();
   const { user } = useAuth();
   const [rulesExpanded, setRulesExpanded] = useState(false);
@@ -196,6 +197,10 @@ export default function MatchDetailsScreen({ navigation, route }) {
         matches: updatedMatches,
       });
 
+      // Check if tournament should progress to next stage
+      // Pass the updatedMatches array to avoid race condition with Firestore updates
+      await checkAndProgressTournament(match.tournamentId, updatedMatches);
+
       // Determine if this is adding or updating a score
       const isUpdating = match.scoreRecorded === true;
       const action = isUpdating ? 'score_updated' : 'score_added';
@@ -282,12 +287,70 @@ export default function MatchDetailsScreen({ navigation, route }) {
 
   const handleShare = async () => {
     try {
+      const shareUrl = `https://getsmash.net/match/${match.id}`;
       await Share.share({
-        message: `Check this match from ${match.tournamentName}`,
+        message: `Check out this match from ${match.tournamentName}: ${shareUrl}`,
+        url: shareUrl, // iOS uses this field for the preview
+        title: `Match: ${match.tournamentName}`, // Android/iOS title
       });
     } catch (error) {
       console.error('Error sharing:', error);
     }
+  };
+
+  const handleEditCourt = () => {
+    if (Platform.OS === 'android') {
+      showToast('Editing court is currently supported on iOS only', 'info');
+      return;
+    }
+
+    Alert.prompt(
+      'Edit Court',
+      'Enter the new court name or number',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Save',
+          onPress: async (newCourt) => {
+            if (!newCourt || !newCourt.trim()) return;
+
+            try {
+              const tournament = tournaments.find(t => t.id === match.tournamentId);
+              if (!tournament) throw new Error('Tournament not found');
+
+              const updatedMatches = tournament.matches.map(m => {
+                if (m.id === match.id) {
+                  const updatedMatch = { ...m, court: newCourt.trim() };
+                  // Remove any undefined fields to prevent Firestore errors
+                  Object.keys(updatedMatch).forEach(key => {
+                    if (updatedMatch[key] === undefined) {
+                      delete updatedMatch[key];
+                    }
+                  });
+                  return updatedMatch;
+                }
+                return m;
+              });
+
+              await updateTournament(match.tournamentId, {
+                matches: updatedMatches,
+              });
+
+              setMatch(prev => ({ ...prev, court: newCourt.trim() }));
+              showToast('Court updated successfully', 'success');
+            } catch (error) {
+              console.error('Error updating court:', error);
+              showToast('Failed to update court', 'error');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      match.court ? match.court.replace('Court ', '') : ''
+    );
   };
 
   // Determine match state
@@ -313,6 +376,7 @@ export default function MatchDetailsScreen({ navigation, route }) {
             style={styles.headerButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             onPress={handleShare}
+            testID="share-button"
           >
             <ShareIcon width={32} height={32} />
           </TouchableOpacity>
@@ -391,10 +455,11 @@ export default function MatchDetailsScreen({ navigation, route }) {
               icon={<TrophyIcon width={24} height={24} />}
               text={match.tournamentName}
             />
-            <DetailsListItem
+            {/* Date/time hidden for simplicity - still calculated and stored in match.dateTime */}
+            {/* <DetailsListItem
               icon={<CalendarIcon width={24} height={24} />}
               text={formatDateTime(match.dateTime)}
-            />
+            /> */}
           </View>
 
           {/* Action Button - Add to Calendar OR Record/Edit Score */}
@@ -408,7 +473,7 @@ export default function MatchDetailsScreen({ navigation, route }) {
           ) : canRecordScore() ? (
             <Button
               title={scoreRecorded ? "Edit score" : "Add score"}
-              variant="accent"
+              variant="ghost"
               size="large"
               onPress={handleRecordScore}
             />
@@ -427,6 +492,16 @@ export default function MatchDetailsScreen({ navigation, route }) {
               </Text>
               <Text style={styles.locationAddress}>{match.address}</Text>
             </View>
+
+            {/* Edit Court Button - Only for Admin */}
+            {isAdmin && (
+              <TouchableOpacity
+                onPress={handleEditCourt}
+                style={styles.editButton}
+              >
+                <EditIcon width={32} height={32} color={Colors.primary300} />
+              </TouchableOpacity>
+            )}
           </View>
           {/* Only show Directions button for future matches */}
           {!isPastMatch && (
@@ -508,6 +583,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.space2,
+  },
+  editButton: {
+    padding: Spacing.space2,
   },
   headerButton: {
     width: 44,

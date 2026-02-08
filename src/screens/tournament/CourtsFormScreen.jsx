@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import CardGroup from '../../components/ui/CardGroup';
@@ -13,7 +13,8 @@ import TrashIcon from '../../../assets/icons/trash.svg';
 import PlusIcon from '../../../assets/icons/plus.svg';
 import CheckIcon from '../../../assets/icons/check.svg';
 
-export default function CourtsFormScreen({ onNavigate, navigation, editMode = false }) {
+export default function CourtsFormScreen({ onNavigate, navigation, editMode = false, onSave }) {
+  console.log('🏟️ CourtsFormScreen mounted', { editMode });
   const insets = useSafeAreaInsets();
   const { courtNumbers, setCourtNumbers } = useTournamentForm();
 
@@ -31,26 +32,31 @@ export default function CourtsFormScreen({ onNavigate, navigation, editMode = fa
     ];
   });
 
-  // Auto-save courts when component unmounts (when navigating away)
-  React.useEffect(() => {
-    return () => {
-      const courtValues = tempCourtFields
-        .filter(field => field.value.trim() !== '')
-        .map(field => field.value.trim())
-        .join(', ');
-      setCourtNumbers(courtValues);
-    };
-  }, [tempCourtFields, setCourtNumbers]);
+  const handleSave = React.useCallback(() => {
+    // Validation for Edit Mode: No empty fields allowed (would reduce count)
+    if (editMode) {
+      const hasEmptyFields = tempCourtFields.some(field => field.value.trim() === '');
+      if (hasEmptyFields) {
+        Alert.alert('Invalid Court Name', 'Court names cannot be empty when editing.');
+        return;
+      }
+    }
 
-  const handleSave = () => {
     const courtValues = tempCourtFields
       .filter(field => field.value.trim() !== '')
       .map(field => field.value.trim())
       .join(', ');
 
     setCourtNumbers(courtValues);
-    onNavigate('main');
-  };
+    onNavigate('main', 'back');
+  }, [tempCourtFields, setCourtNumbers, onNavigate, editMode]);
+
+  // Expose handleSave to parent via onSave callback
+  React.useEffect(() => {
+    if (onSave) {
+      onSave(handleSave);
+    }
+  }, [handleSave, onSave]);
 
   const handleAddCourtField = () => {
     const newId = Math.max(...tempCourtFields.map(f => f.id), 0) + 1;
@@ -77,38 +83,38 @@ export default function CourtsFormScreen({ onNavigate, navigation, editMode = fa
       showsVerticalScrollIndicator={false}
     >
       <CardGroup>
-          {tempCourtFields.map((field, index) => (
-            <ListItem
-              key={field.id}
-              editable={true}
-              placeholder={`Court ${index + 1}`}
-              value={field.value}
-              onChangeText={(value) => handleCourtFieldChange(field.id, value)}
-              keyboardType="default"
-              showChevron={false}
-              rightComponent={
-                tempCourtFields.length > 1 && !editMode ? (
-                  <TouchableOpacity
-                    onPress={() => handleRemoveCourtField(field.id)}
-                    style={styles.removeButton}
-                  >
-                    <TrashIcon width={24} height={24} />
-                  </TouchableOpacity>
-                ) : null
-              }
-            />
-          ))}
+        {tempCourtFields.map((field, index) => (
+          <ListItem
+            key={field.id}
+            editable={true}
+            placeholder={`Court ${index + 1}`}
+            value={field.value}
+            onChangeText={(value) => handleCourtFieldChange(field.id, value)}
+            keyboardType="default"
+            showChevron={false}
+            rightComponent={
+              tempCourtFields.length > 1 && !editMode ? (
+                <TouchableOpacity
+                  onPress={() => handleRemoveCourtField(field.id)}
+                  style={styles.removeButton}
+                >
+                  <TrashIcon width={24} height={24} />
+                </TouchableOpacity>
+              ) : null
+            }
+          />
+        ))}
 
-          {!editMode && (
-            <LinkButton
-              title="Add another court"
-              icon={<PlusIcon />}
-              variant="neutral"
-              onPress={handleAddCourtField}
-              style={styles.addCourtButton}
-            />
-          )}
-        </CardGroup>
+        {!editMode && (
+          <LinkButton
+            title="Add another court"
+            icon={<PlusIcon />}
+            variant="neutral"
+            onPress={handleAddCourtField}
+            style={styles.addCourtButton}
+          />
+        )}
+      </CardGroup>
 
       <Text style={styles.courtHint}>
         {editMode

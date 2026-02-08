@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Animated } from 'react-native';
 import * as Calendar from 'expo-calendar';
 import { Colors } from '../../constants/Colors';
-import { Typography } from '../../constants/Typography';
 import { Spacing } from '../../constants/Spacing';
 import { formatDateTime } from '../../utils/dateFormatter';
 import EmptyState from '../../components/ui/EmptyState';
@@ -11,11 +10,14 @@ import MobileHeader from '../../components/ui/MobileHeader';
 import CreateTournamentModal from '../../components/tournament/CreateTournamentModal';
 import MatchCard from '../../components/match/MatchCard';
 import UpcomingMatchWrapper from '../../components/match/UpcomingMatchWrapper';
+import LastMatchWrapper from '../../components/match/LastMatchWrapper';
 import RecordScoreModal from '../../components/match/RecordScoreModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTournaments } from '../../contexts/TournamentContext';
 
 export default function HomeScreen({ navigation, onCreateTournament }) {
-  const { user } = useAuth();
+  const { userData } = useAuth();
+  const { tournaments, updateTournament, checkAndProgressTournament } = useTournaments();
   const [modalVisible, setModalVisible] = useState(false);
   const [showRecordScoreModal, setShowRecordScoreModal] = useState(false);
 
@@ -50,34 +52,68 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
     setShowRecordScoreModal(true);
   };
 
-  const handleSaveScore = (scores) => {
-    console.log('Saved scores:', scores);
+  const handleSaveScore = async (scores) => {
+    if (!lastMatch?.tournamentId || !lastMatch?.id) {
+      console.error('Cannot save score: match or tournament information missing');
+      return;
+    }
 
-    // Calculate winning team by counting sets won
-    let teamAWins = 0;
-    let teamBWins = 0;
+    try {
+      // Calculate winning team by counting sets won
+      let teamAWins = 0;
+      let teamBWins = 0;
 
-    scores.forEach(set => {
-      const scoreA = parseInt(set.teamA);
-      const scoreB = parseInt(set.teamB);
-      if (scoreA > scoreB) {
-        teamAWins++;
-      } else if (scoreB > scoreA) {
-        teamBWins++;
+      scores.forEach(set => {
+        const scoreA = parseInt(set.teamA);
+        const scoreB = parseInt(set.teamB);
+        if (scoreA > scoreB) {
+          teamAWins++;
+        } else if (scoreB > scoreA) {
+          teamBWins++;
+        }
+      });
+
+      const winningTeam = teamAWins > teamBWins ? 'left' : 'right';
+
+      // Update local state immediately for responsive UI
+      setLastMatch({
+        ...lastMatch,
+        score: scores,
+        scoreRecorded: true,
+        winningTeam: winningTeam,
+      });
+
+      // Find the tournament and update the match in database
+      const tournament = tournaments.find(t => t.id === lastMatch.tournamentId);
+      if (!tournament) {
+        console.error('Tournament not found');
+        return;
       }
-    });
 
-    const winningTeam = teamAWins > teamBWins ? 'left' : 'right';
+      // Update matches array
+      const updatedMatches = tournament.matches.map(m => {
+        if (m.id === lastMatch.id) {
+          const updatedMatch = { ...m, score: scores, scoreRecorded: true, winningTeam };
+          // Remove any undefined fields
+          Object.keys(updatedMatch).forEach(key => {
+            if (updatedMatch[key] === undefined) {
+              delete updatedMatch[key];
+            }
+          });
+          return updatedMatch;
+        }
+        return m;
+      });
 
-    // Update lastMatch with scores and winning team
-    setLastMatch({
-      ...lastMatch,
-      score: scores,
-      scoreRecorded: true,
-      winningTeam: winningTeam,
-    });
+      await updateTournament(lastMatch.tournamentId, {
+        matches: updatedMatches,
+      });
 
-    // TODO: Save scores to database
+      // Check if tournament should progress to next stage
+      await checkAndProgressTournament(lastMatch.tournamentId, updatedMatches);
+    } catch (error) {
+      console.error('Error saving score:', error);
+    }
   };
 
   const handleAddToCalendar = async () => {
@@ -139,10 +175,74 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
     navigation.navigate('MatchDetails', { match: serializableMatch });
   };
 
-  // TODO: Fetch real match data from Firestore
-  // For now, no dummy data shown in production
-  const nextMatch = null;
-  const [lastMatch, setLastMatch] = useState(null);
+  // Get user's matches from tournaments
+  const getUserMatches = () => {
+    if (!userData?.uid || !tournaments || tournaments.length === 0) {
+      return { nextMatch: null, lastMatch: null };
+    }
+
+    const currentTime = new Date();
+    const userMatches = [];
+
+    // Extract all matches where user is a participant
+    tournaments.forEach(tournament => {
+      if (!tournament.matches || tournament.matches.length === 0) return;
+
+      tournament.matches.forEach(match => {
+        // Check if user is in either team
+        const isInTeam1 =
+          match.team1?.player1?.userId === userData.uid ||
+          match.team1?.player2?.userId === userData.uid;
+        const isInTeam2 =
+          match.team2?.player1?.userId === userData.uid ||
+          match.team2?.player2?.userId === userData.uid;
+
+        if (isInTeam1 || isInTeam2) {
+          // Convert match to MatchCard format
+          userMatches.push({
+            ...match,
+            tournamentName: tournament.name,
+            leftTeam: match.team1,
+            rightTeam: match.team2,
+            isPast: match.scoreRecorded || (match.dateTime && new Date(match.dateTime) < currentTime),
+          });
+        }
+      });
+    });
+
+    // Sort matches by date
+    userMatches.sort((a, b) => {
+      const dateA = a.dateTime ? new Date(a.dateTime) : new Date(0);
+      const dateB = b.dateTime ? new Date(b.dateTime) : new Date(0);
+      return dateA - dateB;
+    });
+
+    // Find next upcoming match (future match, not yet played)
+    const upcomingMatches = userMatches.filter(m =>
+      !m.scoreRecorded &&
+      m.dateTime &&
+      new Date(m.dateTime) >= currentTime
+    );
+    const nextMatch = upcomingMatches.length > 0 ? upcomingMatches[0] : null;
+
+    // Find last played match (most recent past match or scored match)
+    const pastMatches = userMatches.filter(m =>
+      m.scoreRecorded ||
+      (m.dateTime && new Date(m.dateTime) < currentTime)
+    );
+    const lastMatch = pastMatches.length > 0 ? pastMatches[pastMatches.length - 1] : null;
+
+    return { nextMatch, lastMatch };
+  };
+
+  const { nextMatch, lastMatch: initialLastMatch } = getUserMatches();
+  const [lastMatch, setLastMatch] = useState(initialLastMatch);
+
+  // Update lastMatch when tournaments change
+  useEffect(() => {
+    const { lastMatch: updatedLastMatch } = getUserMatches();
+    setLastMatch(updatedLastMatch);
+  }, [tournaments, userData?.uid]);
 
   return (
     <View style={styles.container}>
@@ -182,6 +282,7 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
               <UpcomingMatchWrapper>
                 <MatchCard
                   variant="before"
+                  showBadge={false}
                   leftTeam={nextMatch.leftTeam}
                   rightTeam={nextMatch.rightTeam}
                   tournamentName={nextMatch.tournamentName}
@@ -203,24 +304,26 @@ export default function HomeScreen({ navigation, onCreateTournament }) {
               <Animated.View
                 style={{
                   transform: [{ translateY: lastMatchSlideAnim }],
+                  marginTop: Spacing.space5,
                 }}
               >
-                <Text style={[styles.sectionTitle, styles.lastMatchTitle]}>Your last match</Text>
-                <MatchCard
-                  variant="after"
-                  leftTeam={lastMatch.leftTeam}
-                  rightTeam={lastMatch.rightTeam}
-                  tournamentName={lastMatch.tournamentName}
-                  status={lastMatch.status}
-                  dateTime={lastMatch.dateTime}
-                  location={lastMatch.location}
-                  isPast={lastMatch.isPast}
-                  score={lastMatch.score}
-                  scoreRecorded={lastMatch.scoreRecorded}
-                  onAddScore={handleAddScore}
-                  onPress={() => handleMatchPress(lastMatch)}
-                  animationIndex={null}
-                />
+                <LastMatchWrapper>
+                  <MatchCard
+                    variant="after"
+                    leftTeam={lastMatch.leftTeam}
+                    rightTeam={lastMatch.rightTeam}
+                    tournamentName={lastMatch.tournamentName}
+                    status={lastMatch.status}
+                    dateTime={lastMatch.dateTime}
+                    location={lastMatch.location}
+                    isPast={lastMatch.isPast}
+                    score={lastMatch.score}
+                    scoreRecorded={lastMatch.scoreRecorded}
+                    onAddScore={handleAddScore}
+                    onPress={() => handleMatchPress(lastMatch)}
+                    animationIndex={null}
+                  />
+                </LastMatchWrapper>
               </Animated.View>
             )}
           </>
@@ -273,14 +376,5 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  sectionTitle: {
-    fontFamily: 'GeneralSans-Semibold',
-    fontSize: Typography.body200,
-    color: Colors.primary300,
-    marginBottom: Spacing.space3,
-  },
-  lastMatchTitle: {
-    marginTop: Spacing.space5,
   },
 });

@@ -16,8 +16,20 @@ export default function Player({ firstName, lastName, avatarUri, align = 'left' 
         name={`${firstName} ${lastName}`}
       />
       <View style={[styles.nameContainer, isRTL && styles.nameContainerRTL]}>
-        <Text style={[styles.firstName, isRTL && styles.nameRTL]}>{firstName}</Text>
-        <Text style={[styles.lastName, isRTL && styles.nameRTL]}>{lastName}</Text>
+        <Text
+          style={[styles.firstName, isRTL && styles.nameRTL]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {firstName}
+        </Text>
+        <Text
+          style={[styles.lastName, isRTL && styles.nameRTL]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {lastName}
+        </Text>
       </View>
     </View>
   );
@@ -45,12 +57,14 @@ const styles = StyleSheet.create({
     fontSize: Typography.body200,
     color: Colors.primary300,
     lineHeight: Typography.body200,
+    maxWidth: 100,
   },
   lastName: {
     fontFamily: 'GeneralSans-Medium',
     fontSize: Typography.body200,
     color: Colors.primary300,
     lineHeight: Typography.body200,
+    maxWidth: 100,
   },
   nameRTL: {
     textAlign: 'right',

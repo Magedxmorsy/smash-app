@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, LayoutAnimation, UIManager } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, LayoutAnimation, UIManager } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 
 // Enable LayoutAnimation on Android
@@ -10,6 +10,7 @@ import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { Spacing, BorderRadius } from '../../constants/Spacing';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import Button from '../../components/ui/Button';
 import CardGroup from '../../components/ui/CardGroup';
 import ListItem from '../../components/ui/ListItem';
@@ -24,6 +25,7 @@ const FEEDBACK_TYPES = [
 
 export default function FeedbackScreen({ navigation }) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     type: 'bug',
     subject: '',
@@ -33,6 +35,9 @@ export default function FeedbackScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
+
+  // Ref for Android picker to trigger native dialog
+  const androidPickerRef = useRef(null);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -48,9 +53,8 @@ export default function FeedbackScreen({ navigation }) {
       newErrors.type = 'Please select a feedback type';
     }
 
-    if (!formData.subject.trim()) {
-      newErrors.subject = 'Please enter a subject';
-    } else if (formData.subject.length > 100) {
+    // Subject is optional, but if provided, check length
+    if (formData.subject.trim() && formData.subject.length > 100) {
       newErrors.subject = 'Subject must be less than 100 characters';
     }
 
@@ -81,34 +85,23 @@ export default function FeedbackScreen({ navigation }) {
       });
 
       if (result.success) {
-        Alert.alert(
-          'Thank You!',
-          'Your feedback has been submitted successfully. We appreciate your input!',
-          [
-            {
-              text: 'Submit More',
-              onPress: () => {
-                setFormData({
-                  type: 'bug',
-                  subject: '',
-                  message: '',
-                  email: user?.email || ''
-                });
-                setErrors({});
-              }
-            },
-            {
-              text: 'Done',
-              onPress: () => navigation.goBack(),
-              style: 'default'
-            }
-          ]
-        );
+        // Show success toast
+        showToast('Thank you! Your feedback has been sent successfully.', 'success');
+
+        // Reset form
+        setFormData({
+          type: 'bug',
+          subject: '',
+          message: '',
+          email: user?.email || ''
+        });
+        setErrors({});
       } else {
-        Alert.alert('Error', result.error || 'Failed to submit feedback. Please try again.');
+        showToast(result.error || 'Failed to send feedback. Please try again.', 'error');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error('Error submitting feedback:', error);
+      showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,8 +140,14 @@ export default function FeedbackScreen({ navigation }) {
               placeholder="Feedback Type"
               value={selectedTypeLabel}
               onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setShowTypePicker(!showTypePicker);
+                if (Platform.OS === 'android') {
+                  // On Android, focus the hidden Picker to trigger native dialog
+                  androidPickerRef.current?.focus();
+                } else {
+                  // On iOS, toggle inline picker
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setShowTypePicker(!showTypePicker);
+                }
               }}
               error={errors.type}
             />
@@ -168,6 +167,22 @@ export default function FeedbackScreen({ navigation }) {
                 </Picker>
               </View>
             )}
+
+            {/* Hidden Picker for Android - triggers native dialog */}
+            {Platform.OS === 'android' && (
+              <Picker
+                ref={androidPickerRef}
+                selectedValue={formData.type}
+                onValueChange={(itemValue) => {
+                  handleInputChange('type', itemValue);
+                }}
+                style={styles.hiddenPicker}
+              >
+                {FEEDBACK_TYPES.map((type) => (
+                  <Picker.Item key={type.value} label={type.label} value={type.value} />
+                ))}
+              </Picker>
+            )}
           </View>
 
           {/* Subject */}
@@ -175,7 +190,7 @@ export default function FeedbackScreen({ navigation }) {
             <View style={styles.inputContainer}>
               <TextInput
                 style={[styles.input, errors.subject && styles.inputError]}
-                placeholder="Subject"
+                placeholder="Subject (Optional)"
                 placeholderTextColor={Colors.neutral400}
                 value={formData.subject}
                 onChangeText={(value) => handleInputChange('subject', value)}
@@ -233,7 +248,7 @@ export default function FeedbackScreen({ navigation }) {
         {/* Submit Button */}
         <View style={styles.buttonContainer}>
           <Button
-            title={isSubmitting ? "Submitting..." : "Submit Feedback"}
+            title="Send feedback"
             onPress={handleSubmit}
             disabled={isSubmitting}
             loading={isSubmitting}
@@ -332,5 +347,10 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: Spacing.space4,
+  },
+  hiddenPicker: {
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
 });

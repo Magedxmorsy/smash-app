@@ -155,8 +155,8 @@ export default function TeamsList({ teams, totalTeams, onJoinTeam, onCreateTeam,
         <View style={styles.teamsList}>
           {activeTeams.map((team, index) => renderTeamItem(team, index))}
 
-          {/* Tournament Full State - Only show message, button is in sticky position */}
-          {isTournamentFull && (
+          {/* Tournament Full State - Only show during REGISTRATION phase */}
+          {isTournamentFull && tournamentStatus === 'REGISTRATION' && (
             <View style={styles.fullStateContainer}>
               {/* Message based on user type */}
               {isAdmin ? (

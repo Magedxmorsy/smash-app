@@ -1,11 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.magedamorsy.smash",
       "sha256_cert_fingerprints": [
-        "SHA256_FINGERPRINT_HERE"
+        "E8:67:40:D4:E6:E8:47:91:5C:87:8C:28:35:7D:33:EA:EB:AF:67:9D:F0:A7:7E:A7:68:F6:B9:8B:D0:39:38:03"
       ]
     }
   }

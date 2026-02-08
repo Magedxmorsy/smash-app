@@ -20,8 +20,9 @@ import { db } from '../config/firebase';
  */
 export const createDocument = async (collectionName, data) => {
   try {
+    const cleanData = sanitizeForFirestore(data);
     const docRef = await addDoc(collection(db, collectionName), {
-      ...data,
+      ...cleanData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -36,8 +37,9 @@ export const createDocument = async (collectionName, data) => {
  */
 export const setDocument = async (collectionName, documentId, data) => {
   try {
+    const cleanData = sanitizeForFirestore(data);
     await setDoc(doc(db, collectionName, documentId), {
-      ...data,
+      ...cleanData,
       updatedAt: new Date().toISOString()
     }, { merge: true });
     return { error: null };
@@ -101,11 +103,43 @@ export const getDocuments = async (collectionName, conditions = []) => {
 /**
  * Update a document
  */
+/**
+ * Helper to remove undefined fields recursively
+ */
+const sanitizeForFirestore = (data) => {
+  if (data === undefined) return undefined;
+  if (data === null) return null;
+  // Preserve Date and Timestamp objects
+  if (data instanceof Date) return data;
+  if (data && typeof data.toDate === 'function') return data; // Firestore Timestamp
+
+  if (Array.isArray(data)) {
+    return data.map(sanitizeForFirestore).filter(item => item !== undefined);
+  }
+
+  if (typeof data === 'object') {
+    const cleanData = {};
+    Object.keys(data).forEach(key => {
+      const sanitizedValue = sanitizeForFirestore(data[key]);
+      if (sanitizedValue !== undefined) {
+        cleanData[key] = sanitizedValue;
+      }
+    });
+    return cleanData;
+  }
+
+  return data;
+};
+
+/**
+ * Update a document
+ */
 export const updateDocument = async (collectionName, documentId, data) => {
   try {
+    const cleanData = sanitizeForFirestore(data);
     const docRef = doc(db, collectionName, documentId);
     await updateDoc(docRef, {
-      ...data,
+      ...cleanData,
       updatedAt: new Date().toISOString()
     });
     return { error: null };

@@ -10,12 +10,13 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import DetailsListItem from '../ui/DetailsListItem';
 import VersusIcon from '../../../assets/icons/versus.svg';
+import VersusSmallIcon from '../../../assets/icons/vs-small.svg';
 import TrophyIcon from '../../../assets/icons/compete.svg';
 import CalendarIcon from '../../../assets/icons/calendar.svg';
 import LocationIcon from '../../../assets/icons/location.svg';
 
 export default function MatchCard({
-  variant = 'before', // 'before' | 'during' | 'after'
+  variant = 'before', // 'before' | 'during' | 'after' | 'placeholder'
   leftTeam,
   rightTeam,
   tournamentName,
@@ -31,11 +32,12 @@ export default function MatchCard({
   onPress,
   onViewDetails,
   highlightBorder = false,
+  showBadge = true,
   canRecord = true,
   animationIndex = null, // Index for stagger animation (null = no animation)
 }) {
-  // Add defensive checks for missing team data
-  if (!leftTeam || !rightTeam || !leftTeam.player1 || !rightTeam.player1) {
+  // Add defensive checks for missing team data (skip for placeholder variant)
+  if (variant !== 'placeholder' && (!leftTeam || !rightTeam || !leftTeam.player1 || !rightTeam.player1)) {
     return null;
   }
 
@@ -81,93 +83,118 @@ export default function MatchCard({
     }).start();
   };
 
-  const CardContent = () => (
-    <>
-      {/* Teams Section */}
-      <View style={styles.teamsContainer}>
-        <View style={styles.leftTeam}>
-          <Team
-            player1={leftTeam.player1}
-            player2={leftTeam.player2}
-            align="left"
-          />
+  const CardContent = () => {
+    // Placeholder variant for TBD matches in knockout/finals
+    if (variant === 'placeholder') {
+      return (
+        <View style={styles.placeholderContainer}>
+          <View style={styles.placeholderTeamLeft}>
+            <Text style={styles.placeholderText}>{leftTeam?.player1?.firstName || '1st place'}</Text>
+            <Text style={styles.placeholderSubtext}>{leftTeam?.player1?.lastName || 'Group A'}</Text>
+          </View>
+
+          <View style={styles.placeholderVersus}>
+            <VersusSmallIcon width={24} height={24} />
+          </View>
+
+          <View style={styles.placeholderTeamRight}>
+            <Text style={styles.placeholderText}>{rightTeam?.player1?.firstName || '2nd place'}</Text>
+            <Text style={styles.placeholderSubtext}>{rightTeam?.player1?.lastName || 'Group B'}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Regular variants (before, during, after)
+    return (
+      <>
+        {/* Teams Section */}
+        <View style={styles.teamsContainer}>
+          <View style={styles.leftTeam}>
+            <Team
+              player1={leftTeam.player1}
+              player2={leftTeam.player2}
+              align="left"
+            />
+          </View>
+
+          {/* VS Icon or Score Display */}
+          {scoreRecorded && score ? (
+            <View style={styles.scoreContainer}>
+              {score.map((set, index) => (
+                <React.Fragment key={index}>
+                  <Text style={styles.scoreText}>{set.teamA} - {set.teamB}</Text>
+                  {index < score.length - 1 && <View style={styles.scoreDivider} />}
+                </React.Fragment>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.versusContainer}>
+              <VersusIcon width={36} height={100} />
+            </View>
+          )}
+
+          <View style={styles.rightTeam}>
+            <Team
+              player1={rightTeam.player1}
+              player2={rightTeam.player2}
+              align="right"
+            />
+          </View>
         </View>
 
-        {/* VS Icon or Score Display */}
-        {scoreRecorded && score ? (
-          <View style={styles.scoreContainer}>
-            {score.map((set, index) => (
-              <React.Fragment key={index}>
-                <Text style={styles.scoreText}>{set.teamA} - {set.teamB}</Text>
-                {index < score.length - 1 && <View style={styles.scoreDivider} />}
-              </React.Fragment>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.versusContainer}>
-            <VersusIcon width={36} height={100} />
-          </View>
-        )}
-
-        <View style={styles.rightTeam}>
-          <Team
-            player1={rightTeam.player1}
-            player2={rightTeam.player2}
-            align="right"
-          />
+        {/* Divider with Badge */}
+        <View style={styles.dividerContainer}>
+          <View style={styles.divider} />
+          {status && (
+            <View style={styles.badgeContainer}>
+              <Badge variant={status} label={status} />
+            </View>
+          )}
         </View>
-      </View>
 
-      {/* Divider with Badge */}
-      <View style={styles.dividerContainer}>
-        <View style={styles.divider} />
-        {status && (
-          <View style={styles.badgeContainer}>
-            <Badge variant={status} label={status} />
-          </View>
-        )}
-      </View>
+        {/* Match Info */}
+        <View style={styles.infoSection}>
+          {tournamentName && (
+            <DetailsListItem
+              icon={<TrophyIcon width={24} height={24} />}
+              text={tournamentName}
+            />
+          )}
 
-      {/* Match Info */}
-      <View style={styles.infoSection}>
-        {tournamentName && (
+          {/* Date/time hidden for simplicity - still calculated and stored in match.dateTime */}
+          {/* <DetailsListItem
+            icon={<CalendarIcon width={24} height={24} />}
+            text={formattedDateTime}
+          /> */}
+
           <DetailsListItem
-            icon={<TrophyIcon width={24} height={24} />}
-            text={tournamentName}
+            icon={<LocationIcon width={24} height={24} />}
+            text={court ? `${location} - ${court}` : location}
+          />
+        </View>
+
+        {/* Action Button */}
+        {!isPast && onAddToCalendar && (
+          <Button
+            title="Add to calendar"
+            variant="ghost"
+            size="large"
+            onPress={onAddToCalendar}
           />
         )}
 
-        <DetailsListItem
-          icon={<CalendarIcon width={24} height={24} />}
-          text={formattedDateTime}
-        />
-
-        <DetailsListItem
-          icon={<LocationIcon width={24} height={24} />}
-          text={court ? `${location} - ${court}` : location}
-        />
-      </View>
-
-      {/* Action Button */}
-      {!isPast && onAddToCalendar && (
-        <Button
-          title="Add to calendar"
-          variant="ghost"
-          size="large"
-          onPress={onAddToCalendar}
-        />
-      )}
-
-      {isPast && onAddScore && canRecord && (
-        <Button
-          title={scoreRecorded ? "Edit score" : "Add score"}
-          variant="ghost"
-          size="large"
-          onPress={onAddScore}
-        />
-      )}
-    </>
-  );
+        {isPast && onAddScore && canRecord && (
+          <Button
+            title={scoreRecorded ? "Edit score" : "Add score"}
+            variant="ghost"
+            size="large"
+            onPress={onAddScore}
+          />
+        )}
+      </>
+    );
+  };
 
   return onPress ? (
     <TouchableOpacity
@@ -185,6 +212,11 @@ export default function MatchCard({
         }}
       >
         <View style={[styles.card, highlightBorder && styles.highlightBorder]}>
+          {highlightBorder && showBadge && (
+            <View style={styles.yourMatchBadge}>
+              <Text style={styles.yourMatchText}>YOUR MATCH</Text>
+            </View>
+          )}
           <CardContent />
         </View>
       </Animated.View>
@@ -196,6 +228,11 @@ export default function MatchCard({
       }}
     >
       <View style={[styles.card, highlightBorder && styles.highlightBorder]}>
+        {highlightBorder && showBadge && (
+          <View style={styles.yourMatchBadge}>
+            <Text style={styles.yourMatchText}>YOUR MATCH</Text>
+          </View>
+        )}
         <CardContent />
       </View>
     </Animated.View>
@@ -212,8 +249,27 @@ const styles = StyleSheet.create({
     gap: Spacing.space4,
   },
   highlightBorder: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: Colors.accent300,
+  },
+  yourMatchBadge: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    backgroundColor: Colors.accent300,
+    paddingHorizontal: Spacing.space3,
+    paddingTop: 1,
+    paddingBottom: 3,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    zIndex: 10,
+  },
+  yourMatchText: {
+    fontFamily: 'GeneralSans-Semibold',
+    fontSize: 10,
+    color: Colors.primary300,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   teamsContainer: {
     flexDirection: 'row',
@@ -264,5 +320,33 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     gap: Spacing.space1,
+  },
+  // Placeholder variant styles
+  placeholderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  placeholderTeamLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  placeholderTeamRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  placeholderText: {
+    fontFamily: 'GeneralSans-Medium',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+  },
+  placeholderSubtext: {
+    fontFamily: 'GeneralSans-Medium',
+    fontSize: Typography.body200,
+    color: Colors.primary300,
+    marginTop: Spacing.space1,
+  },
+  placeholderVersus: {
+    // No margin needed - using space-between on parent container
   },
 });
