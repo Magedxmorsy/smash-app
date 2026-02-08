@@ -75,22 +75,31 @@ export default function TournamentDetailsScreen({ navigation, route, onEmailVeri
 
   // New: Fetch tournament if we only have an ID (Deep Linking)
   useEffect(() => {
+    let isMounted = true;
     async function fetchTournament() {
       if (tournamentId && !getTournamentById(tournamentId)) {
         console.log('🔗 Deep link detected. Fetching tournament:', tournamentId);
         setIsFetching(true);
-        const { data, error } = await getDocument('tournaments', tournamentId);
-        if (data) {
-          console.log('✅ Tournament fetched successfully');
-          setFetchedTournament(data);
-        } else {
-          console.error('❌ Failed to fetch deep link tournament:', error);
-          showToast('Could not find tournament details.', 'error');
+        try {
+          const { data, error } = await getDocument('tournaments', tournamentId);
+          if (isMounted) {
+            if (data) {
+              console.log('✅ Tournament fetched successfully:', data.name);
+              setFetchedTournament(data);
+            } else {
+              console.error('❌ Failed to fetch deep link tournament:', error);
+              showToast('Could not find tournament details.', 'error');
+            }
+          }
+        } catch (err) {
+          console.error('❌ Error in fetchTournament:', err);
+        } finally {
+          if (isMounted) setIsFetching(false);
         }
-        setIsFetching(false);
       }
     }
     fetchTournament();
+    return () => { isMounted = false; };
   }, [tournamentId]);
 
   // Animated values for each round
@@ -2588,5 +2597,11 @@ const styles = StyleSheet.create({
     width: 32,
     textAlign: 'center',
     paddingTop: Spacing.space1, // Slight top padding to align with player names
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
   },
 });
