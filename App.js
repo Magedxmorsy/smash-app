@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, StyleSheet, View, ActivityIndicator, Modal } from 'react-native';
+import { SafeAreaView, StyleSheet, View, ActivityIndicator, Modal, Alert } from 'react-native';
+import * as Linking from 'expo-linking';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { useState, useEffect, useRef } from 'react';
@@ -16,7 +17,6 @@ import CreateAccountScreen from './src/screens/auth/CreateAccountScreen';
 import EmailVerificationPendingScreen from './src/screens/auth/EmailVerificationPendingScreen';
 import TabNavigator from './src/navigation/TabNavigator';
 import { verifyEmailCode, resendVerificationCode, createUserWithVerificationCode, setUserPassword, createAccountWithEmailVerification } from './src/services/authService';
-import { Alert } from 'react-native';
 import { Colors } from './src/constants/Colors';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { TournamentProvider } from './src/contexts/TournamentContext';
@@ -27,11 +27,11 @@ const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
 // Deep linking configuration
 const linking = {
-  prefixes: ['smash://', 'https://getsmash.net', 'https://www.getsmash.net'],
+  prefixes: [Linking.createURL('/'), 'smash://', 'https://getsmash.net', 'https://www.getsmash.net'],
   config: {
     screens: {
       HomeTab: {
-        path: '',
+        path: 'home-tab',
         screens: {
           HomeList: 'home',
           MatchDetails: 'match/:matchId',
@@ -46,10 +46,10 @@ const linking = {
       },
       UpdatesTab: 'updates',
       ProfileTab: {
-        path: '',
+        path: 'profile-tab',
         screens: {
           ProfileList: 'profile',
-          TournamentDetails: 'tournament/:tournamentId',
+          TournamentDetails: 'tournament-profile/:tournamentId',
         },
       },
     },
