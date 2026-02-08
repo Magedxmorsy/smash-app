@@ -33,20 +33,20 @@ const linking = {
       HomeTab: {
         screens: {
           HomeList: 'home',
-          MatchDetails: 'match/:matchId',
+          MatchDetails: '/match/:matchId',
         },
       },
       CompeteTab: {
         screens: {
           CompeteList: 'compete',
-          TournamentDetails: 'tournament/:tournamentId',
+          TournamentDetails: '/tournament/:tournamentId',
         },
       },
       UpdatesTab: 'updates',
       ProfileTab: {
         screens: {
           ProfileList: 'profile',
-          TournamentDetails: 'tournament/:tournamentId',
+          TournamentDetails: '/tournament/:tournamentId',
         },
       },
     },
